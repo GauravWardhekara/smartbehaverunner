@@ -29,7 +29,25 @@ export async function getScenarioNodeAtLine(
   await resolveBehaveFeatureChildrenIfNeeded(feature);
   const id =
     SCEN_PREFIX + encodeURIComponent(fsPath) + ":" + String(scenarioLine);
-  return feature.children.get(id);
+  const direct = feature.children.get(id);
+  if (direct) {
+    return direct;
+  }
+  for (const child of feature.children.values()) {
+    if (child.range && child.range.start.line === scenarioLine) {
+      return child;
+    }
+  }
+  // If clicked inside a scenario
+  let bestMatch: BehaveHierarchyNode | undefined;
+  for (const child of feature.children.values()) {
+    if (child.range && child.range.start.line <= scenarioLine) {
+      if (!bestMatch || (bestMatch.range && child.range.start.line > bestMatch.range.start.line)) {
+        bestMatch = child;
+      }
+    }
+  }
+  return bestMatch;
 }
 
 export async function getScenarioOutlineExpansionNodes(

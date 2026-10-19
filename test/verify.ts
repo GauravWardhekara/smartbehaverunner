@@ -5,6 +5,7 @@ import { parseStepDefinitionsFromPython } from "../src/core/pythonStepDecorators
 import { findMatchingDefinitions, parseStepLine } from "../src/core/stepMatcher";
 import { computeFeatureSemanticTokenSpans } from "../src/core/featureSemanticTokens";
 import { computeFeatureFormatLineEdits } from "../src/core/featureFormat";
+import { escapeBehaveNameSelect } from "../src/core/behaveNameSelect";
 
 function assert(condition: boolean, msg: string) {
   if (!condition) {
@@ -51,5 +52,9 @@ const edits = computeFeatureFormatLineEdits(lines, 0, lines.length - 1, {
   tabSize: 4,
 });
 console.log(`PASS: Computed ${edits.length} formatting edits`);
+
+// 6. Verify exact scenario name matching and anchoring
+assert(escapeBehaveNameSelect("First") === "^First$", "escapeBehaveNameSelect anchors with ^ and $");
+assert(escapeBehaveNameSelect("Hello (World) [test]") === "^Hello \\(World\\) \\[test\\]$", "escapeBehaveNameSelect escapes regex symbols");
 
 console.log("\nALL VERIFICATION CHECKS PASSED!");

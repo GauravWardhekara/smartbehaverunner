@@ -54,7 +54,7 @@ export const settings = {
         "**/step_*.py",
         "**/steps.py",
     ]),
-    codeLens: setting<boolean>("codeLens", undefined, true),
+    codeLens: setting<boolean>("codeLens", undefined, false),
     justMyCode: setting<boolean>("debug.justMyCode", "debug.justMyCode", true),
     livePanelEnabled: setting<boolean>("livePanel.enabled", undefined, true),
 };

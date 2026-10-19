@@ -3,5 +3,7 @@
  * Escape metacharacters so a Gherkin title selects exactly one scenario.
  */
 export function escapeBehaveNameSelect(scenarioName: string): string {
-  return scenarioName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const trimmed = scenarioName.trim();
+  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return `^${escaped}$`;
 }

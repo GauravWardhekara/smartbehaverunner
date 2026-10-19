@@ -320,8 +320,8 @@
           },
           "smartBehave.codeLens": {
             "type": "boolean",
-            "default": true,
-            "description": "Whether or not to enable in-editor CodeLens (Run/Debug above features and scenarios)"
+            "default": false,
+            "description": "Whether or not to enable in-editor CodeLens (Run/Debug above features and scenarios). Disabled by default to avoid duplicate buttons next to native Test Explorer gutter icons"
           },
           "smartBehave.arguments": {
             "type": "array",
@@ -397,8 +397,8 @@
           },
           "behave.codeLens": {
             "type": "boolean",
-            "default": true,
-            "description": "Whether or not to enable in-editor CodeLens (Run/Debug above features and scenarios)"
+            "default": false,
+            "description": "Whether or not to enable in-editor CodeLens (Run/Debug above features and scenarios). Disabled by default to avoid duplicate buttons next to native Test Explorer gutter icons"
           },
           "behave.arguments": {
             "type": "array",

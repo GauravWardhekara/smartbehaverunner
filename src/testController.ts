@@ -5,7 +5,8 @@ import { parseFeatureFile, ParsedFeature, ParsedScenario, ParsedStep } from "./c
 import { LOG } from "./log";
 import {
   getFeatureHierarchyNodeForPath,
-  getScenarioNodeAtLine
+  getScenarioNodeAtLine,
+  getScenarioOutlineExpansionNodes
 } from "./run/behaveHierarchyQueries";
 import {
   runBehaveHierarchyDebugSelection,
@@ -142,17 +143,6 @@ export class BehaveTestControllerManager {
         const scItem = this.controller.createTestItem(scId, sc.name, uri);
         const scLineLen = lines[sc.line]?.length ?? 0;
         scItem.range = new vscode.Range(sc.line, 0, sc.line, scLineLen);
-
-        // Add steps as sub-items for clear step-level visibility
-        for (let i = 0; i < sc.steps.length; i++) {
-          const step = sc.steps[i];
-          const stepId = `${scId}::step:${i}:L${step.line}`;
-          const stepItem = this.controller.createTestItem(stepId, `${step.keyword} ${step.text}`, uri);
-          const stepLen = lines[step.line]?.length ?? 0;
-          stepItem.range = new vscode.Range(step.line, 0, step.line, stepLen);
-          scItem.children.add(stepItem);
-        }
-
         featureItem.children.add(scItem);
       }
     }
@@ -182,17 +172,26 @@ export class BehaveTestControllerManager {
         }
 
         if (item.parent === undefined) {
-          // Feature level
+          // Feature level: runs the complete feature file
           const node = await getFeatureHierarchyNodeForPath(this.hierarchyStore, fsPath);
           if (node) {
             targetNodes.push(node);
           }
         } else {
-          // Scenario or outline expansion row level
+          // Scenario or outline expansion row level: runs ONLY the clicked scenario/row
           const line = item.range?.start.line ?? 0;
           const node = await getScenarioNodeAtLine(this.hierarchyStore, fsPath, line);
           if (node) {
             targetNodes.push(node);
+          } else {
+            const outlineNodes = await getScenarioOutlineExpansionNodes(
+              this.hierarchyStore,
+              fsPath,
+              line
+            );
+            if (outlineNodes.length > 0) {
+              targetNodes.push(...outlineNodes);
+            }
           }
         }
       }
