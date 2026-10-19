@@ -15,13 +15,29 @@ import {
   getJustMyCodeForResource
 } from "./behavePythonDebug";
 import { nextBehaveLiveSessionId } from "./behaveRunSession";
+import { promptOrResolveCapsFile } from "./behaveConfigFile";
 
 export async function runBehaveDebugJobs(
   jobs: BehaveJob[],
-  token: vscode.CancellationToken
+  token: vscode.CancellationToken,
+  capsFile?: string
 ): Promise<void> {
+  if (jobs.length === 0) {
+    return;
+  }
+
+  let actualCapsFile = capsFile;
+  if (actualCapsFile === undefined) {
+    const res = await promptOrResolveCapsFile(jobs[0].fsPath);
+    if (res === null) {
+      // User cancelled QuickPick
+      return;
+    }
+    actualCapsFile = res;
+  }
+
   cancelActiveBehaveRun();
-  rememberBehaveRun("debug", jobs);
+  rememberBehaveRun("debug", jobs, actualCapsFile);
   const runCts = takeOverActiveRunCancellation();
   const ctx = getBehaveRunnerContext();
   if (ctx) {
@@ -44,6 +60,12 @@ export async function runBehaveDebugJobs(
         type: "raw_log",
         text: `\x1b[36m▶ Starting Python Debug Session for ${title}...\x1b[0m\r\n\x1b[90mAttach debugger via debugpy. Breakpoints and step debugging active.\x1b[0m\r\n\r\n`
       });
+      if (actualCapsFile) {
+        ctx.runSinks.livePanel.post({
+          type: "raw_log",
+          text: `\x1b[36m[Smart Behave] Configuration: -D caps_file=${actualCapsFile}\x1b[0m\r\n`
+        });
+      }
     }
   }
   const parentReg = token.onCancellationRequested(() => {
@@ -62,7 +84,8 @@ export async function runBehaveDebugJobs(
       const { workspaceFolder, config } = buildPythonBehaveDebugLaunch(
         job,
         workspaceRoot,
-        justMyCode
+        justMyCode,
+        actualCapsFile
       );
 
       const started = await vscode.debug.startDebugging(

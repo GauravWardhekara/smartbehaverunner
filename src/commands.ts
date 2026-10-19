@@ -22,6 +22,7 @@ import {
   buildPythonBehaveDebugLaunchFromCliArgs,
   getJustMyCodeForResource
 } from "./run/behavePythonDebug";
+import { promptOrResolveCapsFile } from "./run/behaveConfigFile";
 import { behaveTestController } from "./testController";
 import { stepDefinitionIndex } from "./language/stepIndex";
 import { featureStepIndex } from "./language/featureStepIndex";
@@ -135,6 +136,11 @@ export function registerCommands(context: vscode.ExtensionContext): void {
 
     await revealLiveRunPanel();
 
+    const capsFile = await promptOrResolveCapsFile(args.filePath);
+    if (capsFile === null) {
+      return;
+    }
+
     const justMyCode = getJustMyCodeForResource(args.filePath);
     const { workspaceFolder, config } = buildPythonBehaveDebugLaunchFromCliArgs({
       filePath: args.filePath,
@@ -142,6 +148,7 @@ export function registerCommands(context: vscode.ExtensionContext): void {
       runAll: args.runAll,
       workspaceRoot: args.workspaceRoot,
       justMyCode,
+      capsFile: capsFile ?? undefined,
     });
 
     const started = await vscode.debug.startDebugging(

@@ -461,6 +461,16 @@
             ],
             "description": "Regular Expressions to match failed runs against. Should have two groups: expected and actual"
           },
+          "behave.configDirectory": {
+            "type": "string",
+            "default": "configs",
+            "description": "Directory path (relative to the workspace root) where configuration/capabilities files are stored."
+          },
+          "behave.defaultConfigFile": {
+            "type": "string",
+            "default": "",
+            "description": "Default configuration file (relative path) to pass to Behave for the 'caps_file' argument. If not configured, Smart Behave will prompt you to choose a configuration file when running tests."
+          },
           "behaveRunner.debug.justMyCode": {
             "type": "boolean",
             "default": true,
@@ -496,6 +506,16 @@
               "**/*.feature"
             ],
             "description": "Alias for behave.featureFiles.patterns"
+          },
+          "behaveRunner.configDirectory": {
+            "type": "string",
+            "default": "configs",
+            "description": "Alias for behave.configDirectory"
+          },
+          "behaveRunner.defaultConfigFile": {
+            "type": "string",
+            "default": "",
+            "description": "Alias for behave.defaultConfigFile"
           }
         }
       }

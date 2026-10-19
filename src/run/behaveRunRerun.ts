@@ -112,9 +112,9 @@ export async function rerunLastBehaveRun(): Promise<void> {
     try {
       await revealLiveRunPanel();
       if (snap.mode === "run") {
-        await runBehaveJobs(jobs, cts.token);
+        await runBehaveJobs(jobs, cts.token, snap.capsFile);
       } else {
-        await runBehaveDebugJobs(jobs, cts.token);
+        await runBehaveDebugJobs(jobs, cts.token, snap.capsFile);
       }
     } finally {
       cts.dispose();

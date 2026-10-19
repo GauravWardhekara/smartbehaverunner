@@ -39,6 +39,7 @@ export function spawnBehave(
   interpreterPath: string | undefined,
   opts: {
     liveFormatterPythonRoot: string;
+    capsFile?: string;
   }
 ): cp.ChildProcessWithoutNullStreams {
   const stdoutCaptureFlag = behavesSupportsExplicitNoCaptureStdoutFlag(
@@ -53,7 +54,7 @@ export function spawnBehave(
     "--no-summary",
     "-f",
     "behave_runner_live:BehaveRunnerLiveFormatter",
-    ...getBehaveExtraArgsForResource(job.fsPath)
+    ...getBehaveExtraArgsForResource(job.fsPath, opts.capsFile)
   ];
   if (job.kind === "feature") {
     behaveArgs.push(job.fsPath);

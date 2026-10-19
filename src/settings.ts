@@ -57,4 +57,6 @@ export const settings = {
     codeLens: setting<boolean>("codeLens", undefined, false),
     justMyCode: setting<boolean>("debug.justMyCode", "debug.justMyCode", true),
     livePanelEnabled: setting<boolean>("livePanel.enabled", undefined, true),
+    configDirectory: setting<string>("configDirectory", "configDirectory", "configs"),
+    defaultConfigFile: setting<string>("defaultConfigFile", "defaultConfigFile", ""),
 };

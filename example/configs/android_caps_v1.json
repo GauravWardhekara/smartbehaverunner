@@ -1,0 +1,7 @@
+{
+  "platformName": "Android",
+  "platformVersion": "14.0",
+  "deviceName": "Pixel 8 Pro",
+  "automationName": "UiAutomator2",
+  "app": "builds/SampleApp.apk"
+}

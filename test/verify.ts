@@ -1,5 +1,33 @@
 import * as fs from "fs";
 import * as path from "path";
+
+// Mock vscode module when running outside VS Code Extension Host
+const Module = require("module");
+const originalRequire = Module.prototype.require;
+Module.prototype.require = function (id: string) {
+  if (id === "vscode") {
+    return {
+      window: {
+        showQuickPick: () => Promise.resolve(undefined),
+        createOutputChannel: () => ({
+          append: () => {},
+          appendLine: () => {},
+          info: () => {},
+          warn: () => {},
+          error: () => {},
+          dispose: () => {}
+        })
+      },
+      workspace: {
+        getWorkspaceFolder: () => undefined,
+        getConfiguration: () => ({ get: () => undefined })
+      },
+      Uri: { file: (f: string) => ({ fsPath: f }) }
+    };
+  }
+  return originalRequire.apply(this, arguments);
+};
+
 import { parseFeatureFile } from "../src/core/featureParser";
 import { parseStepDefinitionsFromPython } from "../src/core/pythonStepDecorators";
 import { findMatchingDefinitions, parseStepLine } from "../src/core/stepMatcher";
@@ -106,5 +134,26 @@ assert(split[7] === "log_level=DEBUG", "Last -D arg matches");
 const exampleLaunchJsonArgs = getLaunchJsonSmartBehaveArgs(path.resolve(__dirname, "../example"));
 assert(exampleLaunchJsonArgs.length === 8, `Parsed example launch.json args (actual: ${exampleLaunchJsonArgs.length})`);
 assert(exampleLaunchJsonArgs[3] === "endpoint_file=endpoints.json", "Parsed endpoint_file argument");
+
+// 12. Verify config file detector & caps_file arg injection
+const { detectConfigFiles, applyCapsFileArg } = require("../src/run/behaveConfigFile");
+const exampleRoot = path.resolve(__dirname, "../example");
+const detected = detectConfigFiles(exampleRoot, "configs");
+assert(detected.length >= 3, `Detected at least 3 config files in example/configs (found: ${detected.length})`);
+assert(detected.includes("configs/android_caps_v1.json"), "Found android_caps_v1.json");
+assert(detected.includes("configs/ios_caps_v5.json"), "Found ios_caps_v5.json");
+assert(detected.includes("configs/config.properties"), "Found config.properties");
+
+// Verify replacing caps_file in existing extraArgs
+const updatedArgs = applyCapsFileArg(exampleLaunchJsonArgs, "configs/android_caps_v1.json");
+assert(updatedArgs.length === 8, `Updated args retains 8 tokens (actual: ${updatedArgs.length})`);
+assert(updatedArgs.includes("caps_file=configs/android_caps_v1.json"), "Injected selected android caps file with relative path");
+assert(!updatedArgs.includes("caps_file=ios_caps_v5.json"), "Replaced old caps_file");
+assert(updatedArgs.includes("property_file=configs/config.properties"), "Preserved other properties");
+
+// Verify appending caps_file when none exists
+const cleanArgs = applyCapsFileArg(["-f", "pretty"], "configs/custom_caps.json");
+assert(cleanArgs.length === 4, "Appended -D and caps_file");
+assert(cleanArgs[2] === "-D" && cleanArgs[3] === "caps_file=configs/custom_caps.json", "Appended caps_file argument with relative path");
 
 console.log("\nALL VERIFICATION CHECKS PASSED!");

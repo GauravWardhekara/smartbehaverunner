@@ -13,6 +13,7 @@ export type SerializedBehaveJob =
 export type LastBehaveRunSnapshot = {
   mode: "run" | "debug";
   jobs: SerializedBehaveJob[];
+  capsFile?: string;
 };
 
 const LAST_RUN_WORKSPACE_KEY = "behaveRunner.lastRunSnapshot.v1";
@@ -78,7 +79,8 @@ function parseStoredLastRunSnapshot(
     }
     return undefined;
   }
-  return { mode: o.mode, jobs };
+  const capsFile = typeof o.capsFile === "string" ? o.capsFile : undefined;
+  return { mode: o.mode, jobs, capsFile };
 }
 
 function persistLastRunSnapshot(snap: LastBehaveRunSnapshot): void {
@@ -102,13 +104,18 @@ function serializeBehaveJobs(jobs: BehaveJob[]): SerializedBehaveJob[] {
   );
 }
 
-export function rememberBehaveRun(mode: "run" | "debug", jobs: BehaveJob[]): void {
+export function rememberBehaveRun(
+  mode: "run" | "debug",
+  jobs: BehaveJob[],
+  capsFile?: string
+): void {
   if (jobs.length === 0) {
     return;
   }
   const snap: LastBehaveRunSnapshot = {
     mode,
-    jobs: serializeBehaveJobs(jobs)
+    jobs: serializeBehaveJobs(jobs),
+    capsFile
   };
   lastBehaveRunSnapshot = snap;
   persistLastRunSnapshot(snap);

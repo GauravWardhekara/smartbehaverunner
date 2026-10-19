@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { escapeBehaveNameSelect } from "../core";
 import type { BehaveJob } from "./behaveJobTypes";
 import { getLaunchJsonSmartBehaveArgs } from "./behaveLaunchConfig";
+import { applyCapsFileArg } from "./behaveConfigFile";
 
 export function getJustMyCodeForResource(resourcePath: string): boolean {
   const resourceUri = vscode.Uri.file(resourcePath);
@@ -16,23 +17,31 @@ export function getJustMyCodeForResource(resourcePath: string): boolean {
     .get<boolean>("debug.justMyCode", true);
 }
 
-/** User-supplied behave CLI tokens from `behave.extraArgs` or `behaveRunner.behave.extraArgs`. */
-export function getBehaveExtraArgsForResource(resourcePath: string): string[] {
+/** User-supplied behave CLI tokens from `behave.extraArgs`, `behaveRunner.behave.extraArgs`, or `launch.json`. */
+export function getBehaveExtraArgsForResource(
+  resourcePath: string,
+  capsFile?: string
+): string[] {
   const resourceUri = vscode.Uri.file(resourcePath);
   const cfg = vscode.workspace.getConfiguration("behave", resourceUri);
-  const args = cfg.get<string[]>("extraArgs");
-  if (Array.isArray(args) && args.length > 0) {
-    return args;
+  let args = cfg.get<string[]>("extraArgs");
+  if (!Array.isArray(args) || args.length === 0) {
+    const raw = vscode.workspace
+      .getConfiguration("behaveRunner", resourceUri)
+      .get<unknown>("behave.extraArgs", []);
+    if (Array.isArray(raw) && raw.length > 0) {
+      args = raw.filter((item): item is string => typeof item === "string");
+    } else {
+      const folder = vscode.workspace.getWorkspaceFolder(resourceUri);
+      const root = folder ? folder.uri.fsPath : path.dirname(resourcePath);
+      args = getLaunchJsonSmartBehaveArgs(root);
+    }
   }
-  const raw = vscode.workspace
-    .getConfiguration("behaveRunner", resourceUri)
-    .get<unknown>("behave.extraArgs", []);
-  if (Array.isArray(raw) && raw.length > 0) {
-    return raw.filter((item): item is string => typeof item === "string");
+
+  if (capsFile) {
+    return applyCapsFileArg(args, capsFile);
   }
-  const folder = vscode.workspace.getWorkspaceFolder(resourceUri);
-  const root = folder ? folder.uri.fsPath : path.dirname(resourcePath);
-  return getLaunchJsonSmartBehaveArgs(root);
+  return args;
 }
 
 export type PythonBehaveDebugLaunch = {
@@ -48,12 +57,13 @@ export type PythonBehaveDebugLaunch = {
 export function buildPythonBehaveDebugLaunch(
   job: BehaveJob,
   workspaceRoot: string,
-  justMyCode: boolean
+  justMyCode: boolean,
+  capsFile?: string
 ): PythonBehaveDebugLaunch {
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(
     vscode.Uri.file(job.fsPath)
   );
-  const extraArgs = getBehaveExtraArgsForResource(job.fsPath);
+  const extraArgs = getBehaveExtraArgsForResource(job.fsPath, capsFile);
   const debugArgs =
     job.kind === "feature"
       ? [...extraArgs, job.fsPath]
@@ -85,11 +95,12 @@ export function buildPythonBehaveDebugLaunchFromCliArgs(args: {
   runAll: boolean;
   workspaceRoot: string;
   justMyCode: boolean;
+  capsFile?: string;
 }): PythonBehaveDebugLaunch {
   const workspaceFolder = vscode.workspace.getWorkspaceFolder(
     vscode.Uri.file(args.filePath)
   );
-  const extraArgs = getBehaveExtraArgsForResource(args.filePath);
+  const extraArgs = getBehaveExtraArgsForResource(args.filePath, args.capsFile);
   const debugArgs = args.runAll
     ? [...extraArgs, args.filePath]
     : [...extraArgs, args.filePath, "-n", escapeBehaveNameSelect(args.scenarioName)];

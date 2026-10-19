@@ -36,6 +36,7 @@ import { runBehaveDebugJobs } from "./behaveRunDebug";
 import { rememberBehaveRun } from "./behaveRunLastRun";
 import { normalizeToCrlfChunk } from "../utils/normalizeCrlf";
 import { liveFormatterBundlePath, spawnBehave } from "./behaveRunSpawn";
+import { promptOrResolveCapsFile } from "./behaveConfigFile";
 
 function appendOutputForNode(
   sinks: BehaveRunSinks,
@@ -52,7 +53,7 @@ async function runBehaveJob(
   sinks: BehaveRunSinks,
   extensionPath: string,
   liveSessionId: number,
-  liveOpts?: { skipLivePanelReset?: boolean }
+  liveOpts?: { skipLivePanelReset?: boolean; capsFile?: string }
 ): Promise<void> {
   const featureItem = job.featureItem;
   const fsPath = job.fsPath;
@@ -219,7 +220,8 @@ async function runBehaveJob(
     };
 
     const proc = spawnBehave(runJob, workspaceRoot, interpreter.path, {
-      liveFormatterPythonRoot: liveFormatterRoot
+      liveFormatterPythonRoot: liveFormatterRoot,
+      capsFile: liveOpts?.capsFile
     });
     registerTrackedBehaveSpawn(proc);
     const untrackBehaveSpawn = (): void => {
@@ -359,8 +361,23 @@ async function runBehaveJob(
 
 export async function runBehaveJobs(
   jobs: BehaveJob[],
-  token: vscode.CancellationToken
+  token: vscode.CancellationToken,
+  capsFile?: string
 ): Promise<void> {
+  if (jobs.length === 0) {
+    return;
+  }
+
+  let actualCapsFile = capsFile;
+  if (actualCapsFile === undefined) {
+    const res = await promptOrResolveCapsFile(jobs[0].fsPath);
+    if (res === null) {
+      // User cancelled QuickPick
+      return;
+    }
+    actualCapsFile = res;
+  }
+
   cancelActiveBehaveRun();
   const ctx = getBehaveRunnerContext();
   if (!ctx) {
@@ -371,11 +388,18 @@ export async function runBehaveJobs(
   }
   const { runSinks: sinks, extensionPath } = ctx;
 
-  rememberBehaveRun("run", jobs);
+  rememberBehaveRun("run", jobs, actualCapsFile);
   const runCts = takeOverActiveRunCancellation();
   const parentReg = token.onCancellationRequested(() => runCts.cancel());
   const liveSessionId = nextBehaveLiveSessionId();
   sinks.livePanel.clear();
+  if (actualCapsFile) {
+    sinks.livePanel.post({
+      type: "raw_log",
+      text: `\x1b[36m[Smart Behave] Configuration: -D caps_file=${actualCapsFile}\x1b[0m\r\n`
+    });
+    sinks.output.append(`[Smart Behave] Configuration: -D caps_file=${actualCapsFile}\r\n`);
+  }
   try {
     const batchSameFeatureScenarios =
       jobs.length > 1 &&
@@ -393,7 +417,8 @@ export async function runBehaveJobs(
         extensionPath,
         liveSessionId,
         {
-          skipLivePanelReset: batchSameFeatureScenarios && i > 0
+          skipLivePanelReset: batchSameFeatureScenarios && i > 0,
+          capsFile: actualCapsFile
         }
       );
     }
@@ -410,16 +435,18 @@ export async function runBehaveJobs(
 
 export async function runBehaveHierarchySelection(
   items: BehaveHierarchyNode[],
-  token: vscode.CancellationToken
+  token: vscode.CancellationToken,
+  capsFile?: string
 ): Promise<void> {
   await revealLiveRunPanel();
-  await runBehaveJobs(planJobs(items), token);
+  await runBehaveJobs(planJobs(items), token, capsFile);
 }
 
 export async function runBehaveHierarchyDebugSelection(
   items: BehaveHierarchyNode[],
-  token: vscode.CancellationToken
+  token: vscode.CancellationToken,
+  capsFile?: string
 ): Promise<void> {
   await revealLiveRunPanel();
-  await runBehaveDebugJobs(planJobs(items), token);
+  await runBehaveDebugJobs(planJobs(items), token, capsFile);
 }

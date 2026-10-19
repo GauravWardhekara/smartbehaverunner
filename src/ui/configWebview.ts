@@ -84,6 +84,8 @@ export class SmartBehaveConfigPanel {
       codeLens: settings.codeLens(),
       arguments: settings.arguments().join(" "),
       extraArgs: settings.extraArgs().join(" "),
+      configDirectory: settings.configDirectory(),
+      defaultConfigFile: settings.defaultConfigFile(),
       diffRegex: settings.diffRegex()[0] || "",
       justMyCode: settings.justMyCode(),
       livePanelEnabled: settings.livePanelEnabled(),
@@ -144,6 +146,12 @@ export class SmartBehaveConfigPanel {
 
     if (newSettings.allowedFiles !== undefined) {
       await updateBoth("allowedFiles", newSettings.allowedFiles);
+    }
+    if (newSettings.configDirectory !== undefined) {
+      await updateBoth("configDirectory", String(newSettings.configDirectory).trim());
+    }
+    if (newSettings.defaultConfigFile !== undefined) {
+      await updateBoth("defaultConfigFile", String(newSettings.defaultConfigFile).trim());
     }
     if (newSettings.autoDiscover !== undefined) {
       await updateBoth("autoDiscover", Boolean(newSettings.autoDiscover));
@@ -399,6 +407,18 @@ export class SmartBehaveConfigPanel {
     </div>
 
     <div class="row">
+      <label>Configuration Directory</label>
+      <span class="desc">Directory path relative to project workspace root where config/capabilities files are stored (default: configs)</span>
+      <input type="text" id="configDirectory" />
+    </div>
+
+    <div class="row">
+      <label>Default Configuration File (caps_file)</label>
+      <span class="desc">Default config file relative path (e.g. configs/ios_caps_v5.json). If empty, Smart Behave prompts you to pick one when running tests</span>
+      <input type="text" id="defaultConfigFile" />
+    </div>
+
+    <div class="row">
       <label class="checkbox-row">
         <input type="checkbox" id="chkAutoDiscover" />
         <span>Auto-discover tests on startup</span>
@@ -439,6 +459,8 @@ export class SmartBehaveConfigPanel {
         document.getElementById('allowedFiles').value = msg.data.allowedFiles;
         document.getElementById('cliArgs').value = msg.data.arguments;
         document.getElementById('extraArgs').value = msg.data.extraArgs;
+        document.getElementById('configDirectory').value = msg.data.configDirectory || '';
+        document.getElementById('defaultConfigFile').value = msg.data.defaultConfigFile || '';
         document.getElementById('chkAutoDiscover').checked = msg.data.autoDiscover;
         document.getElementById('chkCodeLens').checked = msg.data.codeLens;
         document.getElementById('chkJustMyCode').checked = msg.data.justMyCode;
@@ -467,6 +489,8 @@ export class SmartBehaveConfigPanel {
         allowedFiles: document.getElementById('allowedFiles').value,
         arguments: document.getElementById('cliArgs').value,
         extraArgs: document.getElementById('extraArgs').value,
+        configDirectory: document.getElementById('configDirectory').value,
+        defaultConfigFile: document.getElementById('defaultConfigFile').value,
         autoDiscover: document.getElementById('chkAutoDiscover').checked,
         codeLens: document.getElementById('chkCodeLens').checked,
         justMyCode: document.getElementById('chkJustMyCode').checked,
