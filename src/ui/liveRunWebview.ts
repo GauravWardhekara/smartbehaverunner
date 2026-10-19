@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import { LOG } from "../log";
 import {
   setLiveRunPanelGateway,
   type LiveRunPanelGateway
@@ -12,7 +13,8 @@ import {
   type LivePanelToWebviewMessage
 } from "./livePanelProtocol";
 
-const VIEW_TYPE = "behaveRunner.liveRun";
+export const PRIMARY_LIVE_RUN_VIEW_TYPE = "smartBehave.liveRun";
+export const LEGACY_LIVE_RUN_VIEW_TYPE = "behaveRunner.liveRun";
 
 const LIVE_PANEL_CAPTURE_KEY = "behaveRunner.livePanelCapture.v1";
 /** Rough budget for `workspaceState` (limit is ~1MB per key). */
@@ -26,9 +28,13 @@ let livePanelCapture: unknown[] = [];
 /** Opens the bottom panel and focuses the Live run view (e.g. when starting Run/Debug). */
 export async function revealLiveRunPanel(): Promise<void> {
   try {
-    await vscode.commands.executeCommand("behaveRunner.liveRun.focus");
+    await vscode.commands.executeCommand("smartBehave.liveRun.focus");
   } catch {
-    /* view not ready */
+    try {
+      await vscode.commands.executeCommand("behaveRunner.liveRun.focus");
+    } catch {
+      /* view not ready */
+    }
   }
 }
 
@@ -148,26 +154,28 @@ export function registerLiveRunWebview(
 ): void {
   workspaceStateForLivePanel = context.workspaceState;
   const provider = new LiveRunWebviewProvider(context.extensionUri);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(VIEW_TYPE, provider, {
-      webviewOptions: { retainContextWhenHidden: true }
-    }),
-    vscode.window.registerWebviewViewProvider("behave.liveRun", provider, {
-      webviewOptions: { retainContextWhenHidden: true }
-    })
-  );
-  context.subscriptions.push(
-    vscode.commands.registerCommand("behaveRunner.showLiveRun", async () => {
-      await vscode.commands.executeCommand("behaveRunner.liveRun.focus");
-    }),
-    vscode.commands.registerCommand("behave.showLiveRun", async () => {
-      try {
-        await vscode.commands.executeCommand("behave.liveRun.focus");
-      } catch {
-        await vscode.commands.executeCommand("behaveRunner.liveRun.focus");
-      }
-    })
-  );
+
+  // 1. Primary view provider (smartBehave.liveRun)
+  try {
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider(PRIMARY_LIVE_RUN_VIEW_TYPE, provider, {
+        webviewOptions: { retainContextWhenHidden: true }
+      })
+    );
+  } catch (err) {
+    LOG.warn("Failed to register primary liveRun view provider:", err);
+  }
+
+  // 2. Legacy view provider fallback (behaveRunner.liveRun) - safely handled if already registered
+  try {
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider(LEGACY_LIVE_RUN_VIEW_TYPE, provider, {
+        webviewOptions: { retainContextWhenHidden: true }
+      })
+    );
+  } catch (err) {
+    LOG.info("Legacy behaveRunner.liveRun view provider already claimed by another extension; continuing.");
+  }
 }
 
 function loadLiveRunHtml(extensionUri: vscode.Uri): string {

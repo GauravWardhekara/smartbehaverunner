@@ -165,17 +165,17 @@
     "viewsContainers": {
       "panel": [
         {
-          "id": "behaveRunnerExecutionPanel",
+          "id": "smartBehaveExecutionPanel",
           "title": "Smart Behave",
           "icon": "media/behave-activity.svg"
         }
       ]
     },
     "views": {
-      "behaveRunnerExecutionPanel": [
+      "smartBehaveExecutionPanel": [
         {
           "type": "webview",
-          "id": "behaveRunner.liveRun",
+          "id": "smartBehave.liveRun",
           "name": "Live Run",
           "visibility": "visible"
         }

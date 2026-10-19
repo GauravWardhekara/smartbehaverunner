@@ -29,8 +29,15 @@ import { registerBehaveRunWorkspacePersistence } from "./run/behaveRunLastRun";
 import { registerLiveRunWebview } from "./ui/liveRunWebview";
 import { getExtension } from "./utils/python";
 
+let isActivated = false;
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  LOG.info("Behave extension activating...");
+  if (isActivated) {
+    LOG.info("Smart Behave extension already activated; skipping duplicate activation.");
+    return;
+  }
+  isActivated = true;
+  LOG.info("Smart Behave extension activating...");
 
   try {
     // 1. Register Execution Store & Sinks
@@ -165,5 +172,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 export function deactivate(): void {
+  isActivated = false;
   setBehaveRunnerContext(undefined);
 }

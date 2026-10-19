@@ -162,9 +162,16 @@ export function registerCommands(context: vscode.ExtensionContext): void {
       { name: "behave.debugScenario", fn: debugScenario },
       { name: "smartBehave.debugScenario", fn: debugScenario },
       { name: "behaveRunner.debugScenario", fn: debugScenario },
+      { name: "smartBehave.showLiveRun", fn: revealLiveRunPanel },
+      { name: "behave.showLiveRun", fn: revealLiveRunPanel },
+      { name: "behaveRunner.showLiveRun", fn: revealLiveRunPanel },
     ];
 
     for (const cmd of commands) {
-      context.subscriptions.push(vscode.commands.registerCommand(cmd.name, cmd.fn));
+      try {
+        context.subscriptions.push(vscode.commands.registerCommand(cmd.name, cmd.fn));
+      } catch (err) {
+        LOG.warn(`Command '${cmd.name}' already registered or could not register:`, err);
+      }
     }
   }
