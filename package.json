@@ -257,6 +257,7 @@
           "type": "webview",
           "id": "smartBehave.liveRun",
           "name": "Live Run",
+          "icon": "media/behave-activity.svg",
           "visibility": "visible"
         }
       ]
