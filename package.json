@@ -102,14 +102,14 @@
       }
     ],
     "icons": {
-      "gherkin": {
+      "behave-gherkin": {
         "description": "Gherkin Feature File Icon",
         "default": {
           "fontPath": "./media/codicons/codicon.ttf",
           "fontCharacter": "\\ea79"
         }
       },
-      "behave": {
+      "behave-feature": {
         "description": "Smart Behave Feature Icon",
         "default": {
           "fontPath": "./media/codicons/codicon.ttf",
