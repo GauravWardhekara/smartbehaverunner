@@ -1,6 +1,10 @@
 MIT License
 
-Copyright (c) 2025 Curve & SimplyTest
+Copyright (c) 2025-2026 Smart Behave Runner Contributors
+
+This extension unifies and builds upon work originally developed by:
+- behave-vsc: Copyright (c) 2025 Curve & SimplyTest (https://github.com/simplytest/behave-vsc)
+- behave-runner: Copyright (c) Remo Yukoff (https://github.com/RemoYukoff/behave-runner)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

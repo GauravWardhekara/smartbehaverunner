@@ -1,76 +1,130 @@
-# Behave VSCode (Unified Behave Extension)
+# Smart Behave Runner
 
-A comprehensive, high-performance Visual Studio Code extension for BDD testing with **[Behave](https://behave.readthedocs.io/)** in Python.
+[![Visual Studio Marketplace](https://img.shields.io/badge/VS%20Code-Smart%20Behave%20Runner-blue.svg)](https://marketplace.visualstudio.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python: Behave](https://img.shields.io/badge/Python-Behave%20BDD-brightgreen.svg)](https://behave.readthedocs.io/)
 
-This extension unifies the capabilities of **[simplytest/behave-vsc](https://github.com/simplytest/behave-vsc)** and **[RemoYukoff/behave-runner](https://github.com/RemoYukoff/behave-runner)** into a single extension, eliminating duplicate runners while providing complete language and test runner tooling.
+A unified, high-performance Visual Studio Code extension for Behavior-Driven Development (BDD) with **[Behave](https://behave.readthedocs.io/)** in Python.
+
+**Smart Behave Runner** merges and enhances the capabilities of two popular VS Code extensions:
+- **[simplytest/behave-vsc](https://github.com/simplytest/behave-vsc)** (by SimplyTest / Curve)
+- **[RemoYukoff/behave-runner](https://github.com/RemoYukoff/behave-runner)** (by Remo Yukoff)
+
+By eliminating duplicated execution engines and unifying language tools with test running capabilities, **Smart Behave Runner** provides an all-in-one experience: instant AST-based test discovery, native Test Explorer with assertion diffs, interactive configuration screen, in-editor CodeLens, seamless `debugpy` debugging, step autocompletion, Go to Definition, Find References, formatting, and a real-time live run dashboard.
 
 ---
 
-## Features
+## 🌟 Acknowledgments & Credits
 
-### 🧪 Native VS Code Test Explorer Integration
-- **Instant Test Discovery**: High-speed TypeScript AST parsing indexes features, scenarios, scenario outlines, and example rows without spawning slow Python processes.
-- **Hierarchical Test Tree**: View tests structured as `Feature -> Scenario Outline -> Examples` or `Feature -> Scenario -> Steps`.
-- **Side-by-Side Failure Diffs**: Automatically matches failed assertions against configurable regexes (`behave.diffRegex`) to populate native VS Code expected vs. actual diff views.
-- **Step-by-Step Status Updates**: Watch scenarios and individual steps update in real time (Passed, Failed, Skipped).
+We extend sincere gratitude to the original creators whose foundational work made this unified extension possible:
+- **SimplyTest & Curve** for creating [behave-vsc](https://github.com/simplytest/behave-vsc), pioneering pure TypeScript Gherkin AST parsing, step autocompletion, Go to Definition, semantic syntax highlighting, and native VS Code Test Explorer integration.
+- **Remo Yukoff** for developing [behave-runner](https://github.com/RemoYukoff/behave-runner), introducing live NDJSON streaming execution, granular scenario-level debugging, the Live Run webview panel, and interactive test tree workflows.
 
-### ⚡ Execution & Debugging
-- **Run & Debug Anywhere**: Launch runs from the Test Explorer, via editor CodeLens, or from the Command Palette.
+This project is licensed under the **MIT License**, honoring both original projects and their open-source contributions.
+
+---
+
+## 🚀 Key Features
+
+### ⚙️ Interactive Configuration Screen & Diagnostics
+Open at any time via **`Smart Behave: Open Configuration Screen`** (`smartBehave.openConfiguration`):
+- **Live Python Interpreter Detection**: Automatically probes the active Python runtime from the Microsoft Python extension or environment path.
+- **Behave CLI Probe**: Validates your installed Behave version and CLI capabilities (such as `--no-capture` stdout support).
+- **Index Statistics**: Shows real-time counts of indexed Python step definitions and Gherkin feature steps with a one-click **Rebuild Index** button.
+- **Form-Based Settings Management**: Easily adjust feature file patterns, step definition paths, CLI arguments, assertion diff regular expressions, and debugging preferences.
+- **Dual Target Saving**: Save configuration changes directly to your **Workspace Settings** (`.vscode/settings.json`) or **User Settings** (`global`).
+- **Quick Links**: Direct button to open standard VS Code Settings UI filtered to Smart Behave settings.
+
+---
+
+### 🧪 Native VS Code Test Explorer (`vscode.TestController`)
+- **Instant Zero-Latency Discovery**: Pure TypeScript AST parser discovers features, scenarios, scenario outlines, and example tables instantly—without waiting for slow Python subprocesses.
+- **Full Hierarchy**: Tests are structured cleanly:
+  - `Feature` &rarr; `Scenario` &rarr; `Steps`
+  - `Feature` &rarr; `Scenario Outline` &rarr; `Examples` table &rarr; `Row`
+- **Side-by-Side Expected vs. Actual Diffs**: Failed assertions matching `smartBehave.diffRegex` populate native VS Code failure diffs for immediate debugging.
+- **Live Status Streaming**: Steps and scenarios update dynamically to *Running*, *Passed*, *Failed*, or *Skipped* as tests execute.
+
+---
+
+### ⚡ Execution & Debugging (`debugpy`)
+- **Run & Debug Anywhere**: Launch runs directly from the Test Explorer tree, in-editor CodeLens, or the Command Palette.
 - **In-Editor CodeLens**:
-  - `$(play) Run` and `$(debug-alt) Debug` above Features and Scenarios.
-  - `$(play) Run all` and `$(debug-alt) Debug all` above Scenario Outlines.
-  - `$(play) Run` and `$(debug-alt) Debug` per example row.
-- **Full Python Debugger Integration**: Seamlessly attaches `debugpy` to Behave with breakpoint support inside step definitions and environment hooks (`before_all`, `after_scenario`, etc.), supporting `justMyCode` filtering.
-- **Clean Process Cancellation & Rerun**: Cancel running tests with a single click or keyboard shortcut, and rerun failed or last runs instantly.
-
-### 📝 Gherkin & Step Language Tooling
-- **Step Autocompletion**: Typing `Given `, `When `, `Then `, `And `, or `But ` triggers auto-complete for matching step definitions from your Python files, pre-filling arguments with `${1:placeholder}` snippets.
-- **Instant Go to Definition**: Jump directly from a step in a `.feature` file to its `@given`, `@when`, `@then`, or `@step` definition in Python.
-- **Find References & Usages**: Right-click any Python step function and select **Find All References** to locate every line across all `.feature` files where that step is used.
-- **Document Formatting**: Format `.feature` files on save or manually (`Shift+Alt+F`) to align data tables and normalize indentation.
-- **Semantic Tokens Syntax Highlighting**: Rich syntax coloring for tags (`@tag`), structural keywords (`Feature:`, `Scenario:`), step keywords (`Given`, `When`), placeholders (`<param>`), docstrings (`"""`), and data tables.
-- **Diagnostics**: Automatically warns about undefined steps in `.feature` files before running tests.
-
-### 📊 Live Run Webview Panel
-- Monitor test execution in a dedicated bottom panel view (`Behave -> Live run`), showing live pass/fail counts, duration, and step outputs.
+  - `▶ Run` and `🐞 Debug` above `Feature` and `Scenario` headers.
+  - `▶ Run all` and `🐞 Debug all` above `Scenario Outline` headers.
+  - `▶ Run` and `🐞 Debug` per example table row.
+- **Full Python Debugger Integration**: Seamlessly attaches `debugpy` to Behave with breakpoint support inside step definitions, before/after scenario hooks, and environment fixtures.
+- **`justMyCode` Filtering**: Set `smartBehave.debug.justMyCode` to `true` to step cleanly through your own code while skipping internal framework libraries.
+- **Cancellation & Rerun**: Cancel executing tests instantly (`Smart Behave: Cancel Run`) and rerun the previous test suite with one click (`Smart Behave: Rerun Last Run`).
 
 ---
 
-## Configuration Settings
+### 📝 Gherkin & Python Language Tooling
+- **Step Autocompletion**: Typing `Given `, `When `, `Then `, `And `, or `But ` provides suggestions matching step definitions from your Python files, generating tab stops for parameters (`${1:param}`).
+- **Go to Definition (F12)**: Jump from any step in a `.feature` file directly to its `@given`, `@when`, `@then`, or `@step` Python decorator and implementation.
+- **Find References (Shift+F12)**: Right-click any Python step function and select **Find All References** to inspect every `.feature` file and line number where that step is executed.
+- **Document & Range Formatting**: Format `.feature` files manually (`Shift+Alt+F`) or automatically on save to align table pipes (`|`) and normalize indentation.
+- **Semantic Syntax Highlighting**: Rich token coloring for tags (`@tag`), structural keywords (`Feature:`, `Scenario:`), step keywords (`Given`, `When`), placeholders (`<param>`), docstrings (`"""`), and data tables.
+- **Undefined Step Diagnostics**: Underlines unknown steps in `.feature` files with informative warnings before tests are executed.
 
-All settings live under the `behave.*` namespace (with backwards-compatible aliases for `behaveRunner.*`):
+---
+
+### 📊 Live Run Panel
+- Dedicated bottom panel tab (**Smart Behave &rarr; Live Run**) displaying real-time test progress, streaming execution logs, passed/failed counters, and duration timers.
+
+---
+
+## 🛠️ Configuration Settings
+
+Settings can be customized via the interactive **Configuration Screen** or directly in your `.vscode/settings.json`.
+
+Primary settings use the `smartBehave.*` namespace. Settings from `behave.*` and `behaveRunner.*` remain fully supported as backward-compatible aliases:
 
 | Setting | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `behave.allowedFiles` | `string` | `**/*.feature` | Glob pattern matching allowed feature files. |
-| `behave.featureFiles.patterns` | `string[]` | `["**/*.feature"]` | Glob patterns for Gherkin feature files. |
-| `behave.stepDefinitions.patterns` | `string[]` | `["**/steps/**/*.py", "**/*_steps.py", "**/step_*.py", "**/steps.py"]` | Glob patterns for Python files containing step definitions. |
-| `behave.autoDiscover` | `boolean` | `true` | Automatically discover all tests on startup. |
-| `behave.codeLens` | `boolean` | `true` | Enable or disable in-editor CodeLens buttons. |
-| `behave.arguments` | `string[]` | `["-f", "pretty"]` | Additional arguments passed to Behave CLI on test runs. |
-| `behave.extraArgs` | `string[]` | `[]` | Extra arguments passed to Behave on both run and debug launches. |
-| `behave.debug.justMyCode` | `boolean` | `true` | Only debug user code (skipping library internals) during debug runs. |
-| `behave.livePanel.enabled` | `boolean` | `true` | Enable or disable the Live run webview panel. |
-| `behave.diffRegex` | `string[]` | `["Expected: (?<expected>.*)[\\s\\S]*but: was (?<actual>.*)"]` | Regular expressions to match failed runs for expected vs. actual diff viewer. |
+| `smartBehave.allowedFiles` | `string` | `**/*.feature` | Glob pattern matching allowed feature files. |
+| `smartBehave.featureFiles.patterns` | `string[]` | `["**/*.feature"]` | Glob patterns for Gherkin feature files. |
+| `smartBehave.stepDefinitions.patterns` | `string[]` | `["**/steps/**/*.py", "**/*_steps.py", "**/step_*.py", "**/steps.py"]` | Glob patterns for Python files containing step definitions. |
+| `smartBehave.autoDiscover` | `boolean` | `true` | Automatically discover and index all tests on workspace startup. |
+| `smartBehave.codeLens` | `boolean` | `true` | Enable or disable in-editor CodeLens (Run/Debug buttons). |
+| `smartBehave.arguments` | `string[]` | `["-f", "pretty"]` | Additional command-line arguments to pass to the Behave CLI on test runs. |
+| `smartBehave.extraArgs` | `string[]` | `[]` | Extra arguments passed to Behave on both run and debug launches (e.g. `["--tags=@wip"]`). |
+| `smartBehave.debug.justMyCode` | `boolean` | `true` | Only debug user code (skipping third-party libraries) during debug mode. |
+| `smartBehave.livePanel.enabled` | `boolean` | `true` | Enable or disable the Live Run webview panel. |
+| `smartBehave.diffRegex` | `string[]` | `["Expected: (?<expected>.*)[\\s\\S]*but: was (?<actual>.*)"]` | Regular expressions to match failed assertions for side-by-side expected vs. actual diffs. |
 
 ---
 
-## Available Commands
+## ⌨️ Commands
 
-- `behave.run`: Run the active feature or all discovered tests.
-- `behave.debug`: Debug the active feature or scenario with `debugpy`.
-- `behave.test`: Run tests via Test Explorer profile.
-- `behave.discover`: Rescan workspace and rebuild test tree and step definitions index.
-- `behave.analyze`: Load and parse the active feature file.
-- `behave.cancelRun` (alias `behaveRunner.cancelRun`): Cancel active test run.
-- `behave.rerunLastRun` (alias `behaveRunner.rerunLastRun`): Rerun the last executed test selection.
-- `behave.showLiveRun` (alias `behaveRunner.showLiveRun`): Focus the Live run panel.
-- `behave.editor.runFeature` / `debugFeature`: Run/Debug feature from editor.
-- `behave.editor.runScenario` / `debugScenario`: Run/Debug scenario from editor.
-- `behave.editor.runScenarioOutline` / `debugScenarioOutline`: Run/Debug scenario outline.
+Access these commands from the Command Palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on macOS):
+
+| Command ID | Title | Description |
+| :--- | :--- | :--- |
+| `smartBehave.openConfiguration` | **Smart Behave: Open Configuration Screen** | Opens the interactive visual settings and diagnostics panel. |
+| `smartBehave.run` | **Smart Behave: Run** | Run the active feature file or all discovered tests. |
+| `smartBehave.debug` | **Smart Behave: Debug** | Debug the active feature file or scenario using `debugpy`. |
+| `smartBehave.cancelRun` | **Smart Behave: Cancel Run** | Cancel the currently active test execution. |
+| `smartBehave.rerunLastRun` | **Smart Behave: Rerun Last Run** | Rerun the last executed test selection. |
+| `smartBehave.discover` | **Smart Behave: Re-index Features and Steps** | Rebuild the test tree, Python step definitions, and feature indices. |
+| `smartBehave.showLiveRun` | **Smart Behave: Show Live Run Panel** | Focus and reveal the Live Run webview panel. |
+
+*(All previous command IDs under `behave.*` and `behaveRunner.*` are also registered as aliases.)*
 
 ---
 
-## License
+## 📦 Requirements
 
-MIT
+- **VS Code**: version `1.85.0` or higher.
+- **Python**: version `3.8+` with the [Microsoft Python Extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python).
+- **Behave**: `pip install behave` (and optional `debugpy` for debugging).
+
+---
+
+## 📄 License
+
+This extension is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2025-2026 Smart Behave Runner Contributors.  
+Portions Copyright (c) 2025 Curve & SimplyTest (`behave-vsc`).  
+Portions Copyright (c) Remo Yukoff (`behave-runner`).

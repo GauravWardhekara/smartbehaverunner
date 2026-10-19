@@ -7,6 +7,16 @@ function setting<T>(name: string, fallbackName?: string, defaultValue?: T)
         const uri = typeof resource === "string" 
             ? Uri.file(resource) 
             : (resource && "uri" in resource ? resource.uri : resource);
+
+        // 1. Check smartBehave.*
+        const smartConfig = workspace.getConfiguration("smartBehave", uri);
+        const smartValue = smartConfig.get<T>(name);
+        if (smartValue !== undefined && smartValue !== null)
+        {
+            return smartValue;
+        }
+
+        // 2. Check behave.*
         const config = workspace.getConfiguration("behave", uri);
         const value = config.get<T>(name);
         if (value !== undefined && value !== null)
@@ -14,6 +24,7 @@ function setting<T>(name: string, fallbackName?: string, defaultValue?: T)
             return value;
         }
 
+        // 3. Check legacy behaveRunner.*
         if (fallbackName)
         {
             const legacyConfig = workspace.getConfiguration("behaveRunner", uri);

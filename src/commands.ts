@@ -131,23 +131,40 @@ export function registerCommands(context: vscode.ExtensionContext): void {
     }
   };
 
-  // Register commands under both behave and behaveRunner namespaces
-  const commands = [
-    { name: "behave.run", fn: runActive },
-    { name: "behave.debug", fn: debugActive },
-    { name: "behave.test", fn: runActive },
-    { name: "behave.discover", fn: discover },
-    { name: "behave.analyze", fn: analyze },
-    { name: "behave.reset", fn: reset },
-    { name: "behave.cancelRun", fn: cancelRun },
-    { name: "behaveRunner.cancelRun", fn: cancelRun },
-    { name: "behave.rerunLastRun", fn: rerunLast },
-    { name: "behaveRunner.rerunLastRun", fn: rerunLast },
-    { name: "behave.debugScenario", fn: debugScenario },
-    { name: "behaveRunner.debugScenario", fn: debugScenario },
-  ];
+    const openConfiguration = () => {
+      const { SmartBehaveConfigPanel } = require("./ui/configWebview");
+      SmartBehaveConfigPanel.createOrShow(context.extensionUri);
+    };
 
-  for (const cmd of commands) {
-    context.subscriptions.push(vscode.commands.registerCommand(cmd.name, cmd.fn));
+    // Register commands under smartBehave, behave, and behaveRunner namespaces
+    const commands = [
+      { name: "smartBehave.openConfiguration", fn: openConfiguration },
+      { name: "smartBehave.openSettings", fn: openConfiguration },
+      { name: "behave.openConfiguration", fn: openConfiguration },
+      { name: "behave.run", fn: runActive },
+      { name: "smartBehave.run", fn: runActive },
+      { name: "behave.debug", fn: debugActive },
+      { name: "smartBehave.debug", fn: debugActive },
+      { name: "behave.test", fn: runActive },
+      { name: "smartBehave.test", fn: runActive },
+      { name: "behave.discover", fn: discover },
+      { name: "smartBehave.discover", fn: discover },
+      { name: "behave.analyze", fn: analyze },
+      { name: "smartBehave.analyze", fn: analyze },
+      { name: "behave.reset", fn: reset },
+      { name: "smartBehave.reset", fn: reset },
+      { name: "behave.cancelRun", fn: cancelRun },
+      { name: "smartBehave.cancelRun", fn: cancelRun },
+      { name: "behaveRunner.cancelRun", fn: cancelRun },
+      { name: "behave.rerunLastRun", fn: rerunLast },
+      { name: "smartBehave.rerunLastRun", fn: rerunLast },
+      { name: "behaveRunner.rerunLastRun", fn: rerunLast },
+      { name: "behave.debugScenario", fn: debugScenario },
+      { name: "smartBehave.debugScenario", fn: debugScenario },
+      { name: "behaveRunner.debugScenario", fn: debugScenario },
+    ];
+
+    for (const cmd of commands) {
+      context.subscriptions.push(vscode.commands.registerCommand(cmd.name, cmd.fn));
+    }
   }
-}

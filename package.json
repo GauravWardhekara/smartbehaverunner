@@ -1,9 +1,15 @@
 {
-  "name": "behave-vscode",
+  "name": "smart-behave-runner",
   "publisher": "SimplyTest",
-  "description": "Comprehensive BDD support for Behave in Python: Test Explorer, CodeLens, Live Run panel, Go to Definition, Step Autocomplete, Formatting, and Diagnostics.",
-  "displayName": "Behave VSCode",
+  "description": "Comprehensive BDD support for Behave in Python: Test Explorer, Interactive Configuration Screen, In-editor CodeLens, Live Run panel, Go to Definition, Step Autocomplete, Formatting, and Diagnostics.",
+  "displayName": "Smart Behave Runner",
   "version": "1.0.0",
+  "license": "MIT",
+  "author": "Smart Behave Runner Contributors",
+  "contributors": [
+    "SimplyTest",
+    "Remo Yukoff <remo.yukoff@gmail.com>"
+  ],
   "repository": {
     "url": "https://github.com/simplytest/behave-vsc",
     "type": "git"
@@ -160,7 +166,7 @@
       "panel": [
         {
           "id": "behaveRunnerExecutionPanel",
-          "title": "Behave",
+          "title": "Smart Behave",
           "icon": "media/behave-activity.svg"
         }
       ]
@@ -170,12 +176,46 @@
         {
           "type": "webview",
           "id": "behaveRunner.liveRun",
-          "name": "Live run",
+          "name": "Live Run",
           "visibility": "visible"
         }
       ]
     },
     "commands": [
+      {
+        "command": "smartBehave.openConfiguration",
+        "title": "Smart Behave: Open Configuration Screen",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "smartBehave.run",
+        "title": "Smart Behave: Run",
+        "icon": "$(run)"
+      },
+      {
+        "command": "smartBehave.debug",
+        "title": "Smart Behave: Debug",
+        "icon": "$(debug)"
+      },
+      {
+        "command": "smartBehave.cancelRun",
+        "title": "Smart Behave: Cancel Run",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "smartBehave.rerunLastRun",
+        "title": "Smart Behave: Rerun Last Run",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "smartBehave.discover",
+        "title": "Smart Behave: Re-index Features and Steps",
+        "icon": "$(search)"
+      },
+      {
+        "command": "smartBehave.showLiveRun",
+        "title": "Smart Behave: Show Live Run Panel"
+      },
       {
         "command": "behave.run",
         "title": "Behave: Run",
@@ -243,8 +283,85 @@
     ],
     "configuration": [
       {
-        "title": "Behave",
+        "title": "Smart Behave Runner",
         "properties": {
+          "smartBehave.allowedFiles": {
+            "type": "string",
+            "default": "**/*.feature",
+            "description": "Glob pattern matching allowed feature files"
+          },
+          "smartBehave.featureFiles.patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/*.feature"
+            ],
+            "description": "Glob patterns for Gherkin feature files"
+          },
+          "smartBehave.stepDefinitions.patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/steps/**/*.py",
+              "**/*_steps.py",
+              "**/step_*.py",
+              "**/steps.py"
+            ],
+            "description": "Glob patterns for Python files containing step definitions"
+          },
+          "smartBehave.autoDiscover": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether or not to discover all tests on startup"
+          },
+          "smartBehave.codeLens": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether or not to enable in-editor CodeLens (Run/Debug above features and scenarios)"
+          },
+          "smartBehave.arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "-f",
+              "pretty"
+            ],
+            "description": "Additional command line arguments to pass to behave"
+          },
+          "smartBehave.extraArgs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Extra arguments passed to behave on every run and debug launch (e.g. \"--tags=@wip\", \"--define=env=staging\")"
+          },
+          "smartBehave.debug.justMyCode": {
+            "type": "boolean",
+            "default": true,
+            "description": "Only debug user code when running Behave in debug mode (debugpy)"
+          },
+          "smartBehave.livePanel.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether or not to enable the Live run webview panel"
+          },
+          "smartBehave.diffRegex": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "Expected: (?<expected>.*)[\\s\\S]*but: was (?<actual>.*)"
+            ],
+            "description": "Regular Expressions to match failed runs against. Should have two groups: expected and actual"
+          },
           "behave.allowedFiles": {
             "type": "string",
             "default": "**/*.feature",
