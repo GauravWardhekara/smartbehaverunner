@@ -15,6 +15,7 @@ import {
 import { normalizeToCrlfChunk } from "../utils/normalizeCrlf";
 import type { LivePanelToWebviewMessage } from "../ui/livePanelProtocol";
 import type { LiveStreamEvent, LiveStreamJob } from "./behaveLiveStreamTypes";
+import type { BehaveTestRunReporter } from "./behaveTestRunReporter";
 
 /** Behave step status name when no Python step matches (not JavaScript `undefined`). */
 function statusLabelForLog(rawLower: string): string {
@@ -286,11 +287,17 @@ export function dispatchLiveStreamEvent(
       stepKey: string;
     }) => void;
     hookFlushState?: LiveRunHookFlushState;
+    testRunReporter?: BehaveTestRunReporter;
   }
 ): void {
   const uri = ctx.featureItem.uri;
 
   if (event.event === "scenario_started") {
+    ctx.testRunReporter?.onScenarioStarted(
+      ctx.fsPath,
+      event.scenario,
+      event.location
+    );
     const binding = resolveLivePanelScenarioBinding(
       ctx.featureItem,
       ctx.job,
@@ -339,6 +346,12 @@ export function dispatchLiveStreamEvent(
   }
 
   if (event.event === "scenario_finished") {
+    ctx.testRunReporter?.onScenarioFinished(
+      ctx.fsPath,
+      event.scenario,
+      event.location,
+      event.status
+    );
     const binding = resolveLivePanelScenarioBinding(
       ctx.featureItem,
       ctx.job,
@@ -359,6 +372,11 @@ export function dispatchLiveStreamEvent(
   }
 
   if (event.event === "feature_finished") {
+    ctx.testRunReporter?.onFeatureFinished(
+      ctx.fsPath,
+      event.feature,
+      event.status
+    );
     flushPendingHookStdout(ctx, {
       scenarioKey: ctx.hookFlushState?.lastScenarioKey
     });
@@ -393,6 +411,16 @@ export function dispatchLiveStreamEvent(
   if (err) {
     ctx.appendOutput(normalizeToCrlfChunk(err), b.outputAnchor, b.locVs);
   }
+
+  ctx.testRunReporter?.onStepFinished(
+    ctx.fsPath,
+    event.scenario,
+    event.location,
+    b.kw,
+    b.stepText,
+    statusForTree,
+    err
+  );
 
   const logHeadline = `${b.kw} ${b.stepText} ... ${statusForLog}\n`;
   const logHeadlineForPanel = stdoutPrefix + logHeadline;

@@ -37,6 +37,7 @@ import { rememberBehaveRun } from "./behaveRunLastRun";
 import { normalizeToCrlfChunk } from "../utils/normalizeCrlf";
 import { liveFormatterBundlePath, spawnBehave } from "./behaveRunSpawn";
 import { promptOrResolveCapsFile } from "./behaveConfigFile";
+import { behaveTestController } from "../testController";
 
 function appendOutputForNode(
   sinks: BehaveRunSinks,
@@ -188,6 +189,8 @@ async function runBehaveJob(
       return unsent;
     }
 
+    const reporter = behaveTestController.getActiveReporter();
+
     const liveDispatchCtx = {
       featureItem,
       job: liveJob,
@@ -216,7 +219,8 @@ async function runBehaveJob(
         });
         plainBytesSentToPanelForStep = pendingPlainStdout.length;
       },
-      hookFlushState
+      hookFlushState,
+      testRunReporter: reporter
     };
 
     const proc = spawnBehave(runJob, workspaceRoot, interpreter.path, {
@@ -320,6 +324,7 @@ async function runBehaveJob(
           }
         }
         if (isCurrentBehaveLiveSession(liveSessionId)) {
+          reporter?.onRunFinished(exitCode);
           flushPendingHookStdout(liveDispatchCtx, {
             scenarioKey: hookFlushState.lastScenarioKey
           });
@@ -391,6 +396,7 @@ export async function runBehaveJobs(
   rememberBehaveRun("run", jobs, actualCapsFile);
   const runCts = takeOverActiveRunCancellation();
   const parentReg = token.onCancellationRequested(() => runCts.cancel());
+  const activeReporter = behaveTestController.ensureActiveReporterForJobs(jobs);
   const liveSessionId = nextBehaveLiveSessionId();
   sinks.livePanel.clear();
   if (actualCapsFile) {
@@ -430,6 +436,7 @@ export async function runBehaveJobs(
     parentReg.dispose();
     releaseActiveRunCancellation(runCts);
     sinks.livePanel.persistCapture();
+    activeReporter.dispose();
   }
 }
 

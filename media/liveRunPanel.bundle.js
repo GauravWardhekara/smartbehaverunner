@@ -244,12 +244,12 @@
         setRowIcon(featureIconEl, "pending");
         return;
       }
-      if (anyScenarioSkipped) {
-        setRowIcon(featureIconEl, "skip");
-        return;
-      }
       if (anyScenarioFailed) {
         setRowIcon(featureIconEl, "fail");
+        return;
+      }
+      if (anyScenarioSkipped) {
+        setRowIcon(featureIconEl, "skip");
         return;
       }
       var allPass = true;

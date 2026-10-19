@@ -22,7 +22,54 @@ Module.prototype.require = function (id: string) {
         getWorkspaceFolder: () => undefined,
         getConfiguration: () => ({ get: () => undefined })
       },
-      Uri: { file: (f: string) => ({ fsPath: f }) }
+      Uri: { file: (f: string) => ({ fsPath: f }) },
+      Position: class {
+        constructor(public line: number, public character: number) {}
+      },
+      Range: class {
+        start: any;
+        end: any;
+        constructor(public startLine: number, public startChar: number, public endLine: number, public endChar: number) {
+          this.start = { line: startLine, character: startChar };
+          this.end = { line: endLine, character: endChar };
+        }
+      },
+      Location: class {
+        constructor(public uri: any, public rangeOrPosition: any) {}
+      },
+      TestMessage: class {
+        expectedOutput?: string;
+        actualOutput?: string;
+        location?: any;
+        constructor(public message: string) {}
+      },
+      TestRunRequest: class {
+        constructor(public include?: any[]) {}
+      },
+      TestRunProfileKind: { Run: 1, Debug: 2 },
+      tests: {
+        createTestController: (id: string, label: string) => {
+          const items = new Map();
+          return {
+            items,
+            createTestItem: (itemId: string, itemLabel: string, uri: any) => ({
+              id: itemId,
+              label: itemLabel,
+              uri,
+              children: new Map(),
+              range: undefined
+            }),
+            createTestRun: () => ({
+              started: () => {},
+              passed: () => {},
+              failed: () => {},
+              skipped: () => {},
+              end: () => {}
+            }),
+            createRunProfile: () => ({ dispose: () => {} })
+          };
+        }
+      }
     };
   }
   return originalRequire.apply(this, arguments);
@@ -155,5 +202,85 @@ assert(updatedArgs.includes("property_file=configs/config.properties"), "Preserv
 const cleanArgs = applyCapsFileArg(["-f", "pretty"], "configs/custom_caps.json");
 assert(cleanArgs.length === 4, "Appended -D and caps_file");
 assert(cleanArgs[2] === "-D" && cleanArgs[3] === "caps_file=configs/custom_caps.json", "Appended caps_file argument with relative path");
+
+// 13. Verify scenario & feature pass/fail propagation in ActiveTestRunSession
+const { ActiveTestRunSession, BehaveTestControllerManager } = require("../src/testController");
+
+const mockManager = new BehaveTestControllerManager();
+const featureUri = { fsPath: exampleFeaturePath };
+
+const mockFeatureItem = {
+  id: exampleFeaturePath,
+  label: "Test Environment",
+  uri: featureUri,
+  children: new Map(),
+  range: { start: { line: 0 } }
+};
+
+const mockSc1 = {
+  id: `${exampleFeaturePath}:4`,
+  label: "First",
+  uri: featureUri,
+  range: { start: { line: 4 } },
+  children: new Map()
+};
+
+const mockSc2 = {
+  id: `${exampleFeaturePath}:10`,
+  label: "Second",
+  uri: featureUri,
+  range: { start: { line: 10 } },
+  children: new Map()
+};
+
+mockFeatureItem.children.set(mockSc1.id, mockSc1);
+mockFeatureItem.children.set(mockSc2.id, mockSc2);
+mockManager.getController().items.set(exampleFeaturePath, mockFeatureItem);
+
+// Test Case 1: When one scenario fails, it fails and the whole feature fails
+const testEvents1: string[] = [];
+const mockRun1 = {
+  started: (item: any) => testEvents1.push(`started:${item.label}`),
+  passed: (item: any) => testEvents1.push(`passed:${item.label}`),
+  failed: (item: any, msg: any) => testEvents1.push(`failed:${item.label}`),
+  skipped: (item: any) => testEvents1.push(`skipped:${item.label}`),
+  end: () => testEvents1.push("end")
+};
+
+const session1 = new ActiveTestRunSession(mockManager.getController(), mockRun1, mockManager);
+session1.onScenarioStarted(exampleFeaturePath, "First", `${exampleFeaturePath}:5`);
+session1.onScenarioFinished(exampleFeaturePath, "First", `${exampleFeaturePath}:5`, "passed");
+session1.onScenarioStarted(exampleFeaturePath, "Second", `${exampleFeaturePath}:11`);
+session1.onStepFinished(exampleFeaturePath, "Second", `${exampleFeaturePath}:12`, "When", "step fails", "failed", "AssertionError: expected True but got False");
+session1.onScenarioFinished(exampleFeaturePath, "Second", `${exampleFeaturePath}:11`, "failed");
+session1.onFeatureFinished(exampleFeaturePath, "Test Environment", "failed");
+session1.onRunFinished(1);
+
+assert(testEvents1.includes("passed:First"), "Scenario First marked as passed");
+assert(testEvents1.includes("failed:Second"), "Scenario Second marked as failed");
+assert(testEvents1.includes("failed:Test Environment"), "Feature marked as failed when a scenario fails");
+
+// Test Case 2: When all scenarios pass, all scenarios pass and the whole feature passes
+const testEvents2: string[] = [];
+const mockRun2 = {
+  started: (item: any) => testEvents2.push(`started:${item.label}`),
+  passed: (item: any) => testEvents2.push(`passed:${item.label}`),
+  failed: (item: any, msg: any) => testEvents2.push(`failed:${item.label}`),
+  skipped: (item: any) => testEvents2.push(`skipped:${item.label}`),
+  end: () => testEvents2.push("end")
+};
+
+const session2 = new ActiveTestRunSession(mockManager.getController(), mockRun2, mockManager);
+session2.onScenarioStarted(exampleFeaturePath, "First", `${exampleFeaturePath}:5`);
+session2.onScenarioFinished(exampleFeaturePath, "First", `${exampleFeaturePath}:5`, "passed");
+session2.onScenarioStarted(exampleFeaturePath, "Second", `${exampleFeaturePath}:11`);
+session2.onScenarioFinished(exampleFeaturePath, "Second", `${exampleFeaturePath}:11`, "passed");
+session2.onFeatureFinished(exampleFeaturePath, "Test Environment", "passed");
+session2.onRunFinished(0);
+
+assert(testEvents2.includes("passed:First"), "Scenario First marked as passed");
+assert(testEvents2.includes("passed:Second"), "Scenario Second marked as passed");
+assert(testEvents2.includes("passed:Test Environment"), "Whole feature marked as passed when all scenarios pass");
+assert(!testEvents2.some(e => e.startsWith("failed:")), "No failures recorded when all pass");
 
 console.log("\nALL VERIFICATION CHECKS PASSED!");
