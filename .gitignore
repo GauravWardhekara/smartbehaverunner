@@ -1,0 +1,7 @@
+out
+node_modules
+.vscode-test/
+*.vsix
+**.venv
+_simplytest/
+_behave_runner/

@@ -1,0 +1,384 @@
+{
+  "name": "behave-vscode",
+  "publisher": "SimplyTest",
+  "description": "Comprehensive BDD support for Behave in Python: Test Explorer, CodeLens, Live Run panel, Go to Definition, Step Autocomplete, Formatting, and Diagnostics.",
+  "displayName": "Behave VSCode",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/simplytest/behave-vsc",
+    "type": "git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Testing",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "behave",
+    "bdd",
+    "gherkin",
+    "cucumber",
+    "feature",
+    "python",
+    "test",
+    "testing"
+  ],
+  "icon": "./data/logo.png",
+  "activationEvents": [
+    "workspaceContains:**/*.feature",
+    "onStartupFinished"
+  ],
+  "extensionDependencies": [
+    "ms-python.python"
+  ],
+  "main": "./out/bundle.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "behave",
+        "aliases": [
+          "Behave",
+          "feature"
+        ],
+        "extensions": [
+          ".feature"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "semanticTokenTypes": [
+      {
+        "id": "behaveComment",
+        "superType": "comment",
+        "description": "Line comments and language pragma in .feature files"
+      },
+      {
+        "id": "behaveStructuralKeyword",
+        "superType": "keyword",
+        "description": "Feature:, Scenario:, Background:, Examples:, Rule:, …"
+      },
+      {
+        "id": "behaveStepKeyword",
+        "superType": "keyword",
+        "description": "Given, When, Then, And, But, *"
+      },
+      {
+        "id": "behaveTitle",
+        "superType": "class",
+        "description": "Titles after structural keywords"
+      },
+      {
+        "id": "behaveStepText",
+        "superType": "string",
+        "description": "Step body text"
+      },
+      {
+        "id": "behaveDocstring",
+        "superType": "string",
+        "description": "Triple-quoted / fenced docstrings"
+      },
+      {
+        "id": "behaveTable",
+        "superType": "string",
+        "description": "Example / data table rows"
+      },
+      {
+        "id": "behavePlaceholder",
+        "superType": "variable",
+        "description": "Outline placeholders <name>"
+      },
+      {
+        "id": "behaveTag",
+        "superType": "namespace",
+        "description": "Tags (@tag)"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "behave",
+        "scopes": {
+          "behaveComment": [
+            "comment.line.number-sign",
+            "comment.line"
+          ],
+          "behaveStructuralKeyword": [
+            "keyword.control",
+            "keyword.other"
+          ],
+          "behaveStepKeyword": [
+            "entity.name.function",
+            "keyword.other"
+          ],
+          "behaveTitle": [
+            "entity.name.type.class",
+            "entity.name"
+          ],
+          "behaveStepText": [
+            "string.unquoted",
+            "markup.inserted"
+          ],
+          "behaveDocstring": [
+            "string.quoted.docstring",
+            "string.quoted"
+          ],
+          "behaveTable": [
+            "string.other",
+            "markup.inline.raw"
+          ],
+          "behavePlaceholder": [
+            "constant.character.format.placeholder",
+            "variable.other"
+          ],
+          "behaveTag": [
+            "entity.name.tag",
+            "support.variable.annotation"
+          ]
+        }
+      }
+    ],
+    "configurationDefaults": {
+      "editor.semanticTokenColorCustomizations": {
+        "rules": {
+          "behaveTag:behave": "#FFA500",
+          "behavePlaceholder:behave": "#FF8DC7"
+        },
+        "[*Dark*]": {
+          "rules": {
+            "behaveStepText:behave": "#FFFFFF"
+          }
+        },
+        "[*Light*]": {
+          "rules": {
+            "behaveStepText:behave": "#1a1a1a"
+          }
+        }
+      }
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "behaveRunnerExecutionPanel",
+          "title": "Behave",
+          "icon": "media/behave-activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "behaveRunnerExecutionPanel": [
+        {
+          "type": "webview",
+          "id": "behaveRunner.liveRun",
+          "name": "Live run",
+          "visibility": "visible"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "behave.run",
+        "title": "Behave: Run",
+        "icon": "$(run)"
+      },
+      {
+        "command": "behave.debug",
+        "title": "Behave: Debug",
+        "icon": "$(debug)"
+      },
+      {
+        "command": "behave.test",
+        "title": "Behave: Test",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "behave.analyze",
+        "title": "Behave: Load File",
+        "icon": "$(search)"
+      },
+      {
+        "command": "behave.discover",
+        "title": "Behave: Discover",
+        "icon": "$(search)"
+      },
+      {
+        "command": "behave.reset",
+        "title": "Behave: Reset",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "behave.cancelRun",
+        "title": "Behave: Cancel Run",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "behave.rerunLastRun",
+        "title": "Behave: Rerun Last Run",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "behave.showLiveRun",
+        "title": "Behave: Show Live Run Panel"
+      },
+      {
+        "command": "behave.debugScenario",
+        "title": "Behave: Debug Scenario"
+      },
+      {
+        "command": "behaveRunner.cancelRun",
+        "title": "Behave: Cancel Run"
+      },
+      {
+        "command": "behaveRunner.rerunLastRun",
+        "title": "Behave: Rerun Last Run"
+      },
+      {
+        "command": "behaveRunner.showLiveRun",
+        "title": "Behave: Show Live Run Panel"
+      },
+      {
+        "command": "behaveRunner.debugScenario",
+        "title": "Behave: Debug Scenario"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "Behave",
+        "properties": {
+          "behave.allowedFiles": {
+            "type": "string",
+            "default": "**/*.feature",
+            "description": "Glob pattern matching allowed feature files"
+          },
+          "behave.featureFiles.patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/*.feature"
+            ],
+            "description": "Glob patterns for Gherkin feature files"
+          },
+          "behave.stepDefinitions.patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/steps/**/*.py",
+              "**/*_steps.py",
+              "**/step_*.py",
+              "**/steps.py"
+            ],
+            "description": "Glob patterns for Python files containing step definitions"
+          },
+          "behave.autoDiscover": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether or not to discover all tests on startup"
+          },
+          "behave.codeLens": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether or not to enable in-editor CodeLens (Run/Debug above features and scenarios)"
+          },
+          "behave.arguments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "-f",
+              "pretty"
+            ],
+            "description": "Additional command line arguments to pass to behave"
+          },
+          "behave.extraArgs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Extra arguments passed to behave on every run and debug launch (e.g. \"--tags=@wip\", \"--define=env=staging\")"
+          },
+          "behave.debug.justMyCode": {
+            "type": "boolean",
+            "default": true,
+            "description": "Only debug user code when running Behave in debug mode (debugpy)"
+          },
+          "behave.livePanel.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether or not to enable the Live run webview panel"
+          },
+          "behave.diffRegex": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "Expected: (?<expected>.*)[\\s\\S]*but: was (?<actual>.*)"
+            ],
+            "description": "Regular Expressions to match failed runs against. Should have two groups: expected and actual"
+          },
+          "behaveRunner.debug.justMyCode": {
+            "type": "boolean",
+            "default": true,
+            "description": "Alias for behave.debug.justMyCode"
+          },
+          "behaveRunner.behave.extraArgs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Alias for behave.extraArgs"
+          },
+          "behaveRunner.stepDefinitions.patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/steps/**/*.py",
+              "**/*_steps.py",
+              "**/step_*.py",
+              "**/steps.py"
+            ],
+            "description": "Alias for behave.stepDefinitions.patterns"
+          },
+          "behaveRunner.featureFiles.patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/*.feature"
+            ],
+            "description": "Alias for behave.featureFiles.patterns"
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "esbuild": "node esbuild.js",
+    "compile": "npm run check-ts && npm run esbuild",
+    "check-ts": "tsc --noEmit",
+    "test": "node -e \"const esbuild = require('esbuild'); esbuild.buildSync({ entryPoints: ['test/verify.ts'], bundle: true, platform: 'node', outfile: 'test/verify.cjs' });\" && node test/verify.cjs && node -e \"require('fs').unlinkSync('test/verify.cjs')\"",
+    "watch": "node esbuild.js --watch",
+    "package": "npm run compile && vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/python-extension": "^1.0.5",
+    "@vscode/vsce": "^3.6.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "neverthrow": "^8.2.0"
+  }
+}

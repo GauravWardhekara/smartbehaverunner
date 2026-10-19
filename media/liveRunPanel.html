@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="BEHAVE_RUN_CSP_PLACEHOLDER" />
+  <title>Behave Live run</title>
+  BEHAVE_RUN_CODICON_LINK_PLACEHOLDER
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    body {
+      font-family: var(--vscode-font-family, system-ui, "Segoe UI", sans-serif);
+      font-size: 12px;
+      color: var(--vscode-foreground, #cccccc);
+      box-sizing: border-box;
+      background: var(--vscode-editor-background, #1e1e1e);
+    }
+    .view-root {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+    }
+    .live-toolbar {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      box-sizing: border-box;
+      margin: 0;
+      border-bottom: 1px solid
+        var(--vscode-widget-border, rgba(128, 128, 128, 0.35));
+      background: var(
+        --vscode-sideBar-background,
+        var(--vscode-editor-background, #252526)
+      );
+    }
+    .live-toolbar-btn {
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 6px;
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      min-height: 28px;
+      border: none;
+      background: transparent;
+      color: var(--vscode-icon-foreground, var(--vscode-foreground, #ccc));
+      cursor: pointer;
+      line-height: 0;
+      flex-shrink: 0;
+    }
+    .live-toolbar-btn:hover {
+      background: var(
+        --vscode-toolbar-hoverBackground,
+        rgba(255, 255, 255, 0.06)
+      );
+    }
+    .live-toolbar-btn:focus-visible {
+      outline: 1px solid var(--vscode-focusBorder);
+      outline-offset: -1px;
+    }
+    .live-toolbar-btn .codicon {
+      font-size: 16px;
+    }
+    .live-toolbar-btn--rerun .codicon {
+      color: var(--vscode-testing-iconPassed, #89d185);
+    }
+    .live-toolbar-btn--rerun:hover .codicon {
+      filter: brightness(1.15);
+    }
+    .live-toolbar-btn--stop .codicon {
+      color: var(--vscode-errorForeground, #d83b3b);
+    }
+    .live-toolbar-btn--stop:hover .codicon {
+      color: var(--vscode-errorForeground, #e85555);
+    }
+    /* Find in console: keep run actions (rerun/stop) grouped on the left. */
+    .live-toolbar-btn--console-find {
+      margin-left: auto;
+    }
+    .view-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .shell {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .shell-main {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      flex: 1 1 auto;
+      min-height: 0;
+      box-sizing: border-box;
+    }
+    .pane-tree {
+      flex: 0 0 280px;
+      width: 280px;
+      min-width: 120px;
+      max-width: 85%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      position: relative;
+      z-index: 0;
+    }
+    #treeRoot {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      -webkit-user-select: none;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    /*
+      Sin hueco en el flex: el separador ocupa 0px pero dibuja una banda a ambos lados
+      (::before) para hit-testing y un tinte semitransparente sobre árbol/consola.
+    */
+    .splitter {
+      --splitter-bleed-half: 6px;
+      box-sizing: border-box;
+      flex: 0 0 0;
+      width: 0;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      cursor: col-resize;
+      align-self: stretch;
+      position: relative;
+      z-index: 2;
+      overflow: visible;
+      flex-shrink: 0;
+    }
+    .splitter::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: calc(2 * var(--splitter-bleed-half));
+      transform: translateX(-50%);
+      box-sizing: border-box;
+      pointer-events: auto;
+      border-radius: 2px;
+      background: transparent;
+    }
+    .splitter:hover::before {
+      background: color-mix(
+        in srgb,
+        var(--vscode-sash-hoverBorder, rgba(128, 128, 128, 0.55)) 42%,
+        transparent
+      );
+    }
+    .splitter.is-dragging::before {
+      background: color-mix(
+        in srgb,
+        var(--vscode-focusBorder, rgba(0, 122, 204, 0.65)) 48%,
+        transparent
+      );
+    }
+    .pane-console {
+      flex: 1 1 0;
+      min-width: 64px;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      z-index: 0;
+      /* Slightly separated from the tree: same family as panel/output in the workbench. */
+      background-color: var(
+        --vscode-panel-background,
+        var(--vscode-sideBar-background, #252526)
+      );
+      border-radius: 2px;
+    }
+    .console-find-bar {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      box-sizing: border-box;
+      border-bottom: 1px solid
+        var(--vscode-widget-border, rgba(128, 128, 128, 0.35));
+      background: var(
+        --vscode-editorWidget-background,
+        var(--vscode-panel-background, var(--vscode-sideBar-background, #252526))
+      );
+    }
+    .console-find-bar.console-find-bar--hidden {
+      display: none;
+    }
+    .console-find-input {
+      flex: 1 1 auto;
+      min-width: 48px;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 4px 8px;
+      font-family: var(--vscode-font-family, sans-serif);
+      font-size: 12px;
+      color: var(--vscode-input-foreground);
+      background: var(--vscode-input-background);
+      border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.35));
+      border-radius: 2px;
+      outline: none;
+    }
+    .console-find-input:focus {
+      border-color: var(--vscode-focusBorder);
+    }
+    .console-find-counts {
+      flex: 0 0 auto;
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground, rgba(204, 204, 204, 0.72));
+      white-space: nowrap;
+    }
+    .console-find-mini {
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 2px;
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      min-height: 24px;
+      border: none;
+      border-radius: 2px;
+      background: transparent;
+      color: var(--vscode-icon-foreground, var(--vscode-foreground, #ccc));
+      cursor: pointer;
+      flex-shrink: 0;
+      line-height: 0;
+    }
+    .console-find-mini:hover {
+      background: var(
+        --vscode-toolbar-hoverBackground,
+        rgba(255, 255, 255, 0.06)
+      );
+    }
+    .console-find-mini:focus-visible {
+      outline: 1px solid var(--vscode-focusBorder);
+      outline-offset: -1px;
+    }
+    .console-find-mini .codicon {
+      font-size: 14px;
+    }
+    .console-out mark.console-find-hit {
+      background: color-mix(
+        in srgb,
+        var(--vscode-editor-findMatchHighlightBackground, rgba(243, 192, 64, 0.28))
+          100%,
+        transparent
+      );
+      color: inherit;
+      padding: 0;
+      border-radius: 1px;
+    }
+    .console-out mark.console-find-hit.console-find-hit-current {
+      outline: 1px solid var(--vscode-focusBorder);
+      background: color-mix(
+        in srgb,
+        var(--vscode-editor-findMatchBackground, rgba(234, 92, 0, 0.45)) 100%,
+        transparent
+      );
+    }
+    .console-out {
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 6px 10px;
+      overflow: auto;
+      box-sizing: border-box;
+      -webkit-user-select: text;
+      user-select: text;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: var(--vscode-editor-font-family, Consolas, monospace);
+      font-size: var(--vscode-editor-font-size, 12px);
+      line-height: 1.45;
+      color: var(--vscode-editor-foreground, #d4d4d4);
+      background: transparent;
+      border: none;
+      border-radius: 0;
+    }
+    .console-out .console-line {
+      color: var(--vscode-editor-foreground, #d4d4d4);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: var(--vscode-editor-font-family, Consolas, monospace);
+      font-size: var(--vscode-editor-font-size, 12px);
+    }
+    .console-out .console-err {
+      color: var(--vscode-errorForeground, #f48771);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: var(--vscode-editor-font-family, Consolas, monospace);
+      font-size: var(--vscode-editor-font-size, 12px);
+    }
+    .tree-node {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      min-width: 0;
+    }
+    /* One .tree-children level = padding-left 14px (must match JS TREE_CHILD_INDENT_PX). */
+    .tree-node > summary,
+    .tree-step {
+      --tree-bleed-left: 0px;
+      margin-left: calc(-1 * var(--tree-bleed-left));
+      width: calc(100% + var(--tree-bleed-left));
+      max-width: none;
+      box-sizing: border-box;
+      font-family: var(--vscode-font-family, system-ui, "Segoe UI", sans-serif);
+      font-size: var(--vscode-font-size, 12px);
+      font-weight: var(--vscode-font-weight, normal);
+      color: var(--vscode-foreground, #cccccc);
+    }
+    .tree-node > summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 3px 8px;
+      padding-left: calc(8px + var(--tree-bleed-left));
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .tree-node > summary::-webkit-details-marker {
+      display: none;
+    }
+    .tree-chevron {
+      flex: 0 0 14px;
+      width: 14px;
+      height: 14px;
+      line-height: 14px;
+      text-align: center;
+      font-size: 8px;
+      color: var(--vscode-icon-foreground, var(--vscode-foreground, #cccccc));
+      opacity: 0.8;
+      transform: rotate(0deg);
+      transform-origin: 50% 50%;
+      transition: transform 0.12s ease;
+      cursor: pointer;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    details.tree-node[open] > summary > .tree-chevron {
+      transform: rotate(90deg);
+    }
+    .tree-node > summary:hover {
+      background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.06));
+    }
+    .tree-row-icon {
+      flex: 0 0 18px;
+      width: 18px;
+      text-align: center;
+      font-family: var(--vscode-font-family, system-ui, "Segoe UI", sans-serif);
+      font-size: 13px;
+      line-height: 1.2;
+      flex-shrink: 0;
+    }
+    .tree-row-icon.codicon {
+      font: normal normal normal 14px/1 codicon;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tree-row-icon.icon-pass { color: var(--vscode-testing-iconPassed, #89d185); }
+    .tree-row-icon.icon-fail { color: var(--vscode-testing-iconFailed, #f48771); }
+    .tree-row-icon.icon-skip {
+      color: var(--vscode-testing-iconSkipped, var(--vscode-descriptionForeground, #848484));
+    }
+    .tree-row-icon.icon-pending {
+      opacity: 1;
+      pointer-events: none;
+      color: var(--vscode-icon-foreground, var(--vscode-foreground, #cccccc));
+    }
+    .tree-row-icon.icon-none {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .tree-row-label {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tree-children {
+      margin: 0;
+      padding: 0 0 0 14px;
+      margin-left: 0;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      min-width: 0;
+    }
+    .tree-step {
+      padding: 3px 8px;
+      padding-left: var(--tree-bleed-left);
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      border-radius: 0;
+      cursor: pointer;
+    }
+    .tree-step:hover {
+      background: var(--vscode-list-hoverBackground, rgba(255,255,255,0.06));
+    }
+    .tree-children.tree-steps > .tree-step {
+      padding-left: calc(var(--tree-bleed-left) + 22px);
+    }
+    .tree-step.tree-step-fail .tree-row-label {
+      color: var(--vscode-errorForeground, #f48771);
+    }
+    .tree-item-selected {
+      background: var(--vscode-list-inactiveSelectionBackground, rgba(0, 122, 204, 0.25)) !important;
+      outline: 1px solid var(--vscode-focusBorder, rgba(0, 122, 204, 0.6));
+      outline-offset: -1px;
+      border-radius: 0;
+    }
+    .empty-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1 1 auto;
+      min-height: 0;
+      box-sizing: border-box;
+      padding: 24px 16px;
+      font-size: 13px;
+      color: var(--vscode-descriptionForeground, rgba(204, 204, 204, 0.72));
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .empty-placeholder.hidden {
+      display: none;
+    }
+    .shell.hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="view-root">
+    <header class="live-toolbar" aria-label="Live run actions">
+      <button
+        type="button"
+        class="live-toolbar-btn live-toolbar-btn--rerun"
+        id="btnRerun"
+        title="Rerun last run"
+        aria-label="Rerun last run"
+      >
+        <i class="codicon codicon-debug-rerun" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="live-toolbar-btn live-toolbar-btn--stop"
+        id="btnStop"
+        title="Stop"
+        aria-label="Stop"
+      >
+        <i class="codicon codicon-debug-stop" aria-hidden="true"></i>
+      </button>
+      <button
+        type="button"
+        class="live-toolbar-btn live-toolbar-btn--console-find"
+        id="btnConsoleFind"
+        title="Find in console (Ctrl+F or Cmd+F)"
+        aria-label="Find in console"
+      >
+        <i class="codicon codicon-search" aria-hidden="true"></i>
+      </button>
+    </header>
+    <div class="view-body">
+      <div id="emptyPlaceholder" class="empty-placeholder">
+        Nothing to show
+      </div>
+      <div class="shell hidden" id="shell">
+        <div class="shell-main" id="shellMain">
+          <div class="pane-tree" id="paneTree">
+            <div id="treeRoot"></div>
+          </div>
+          <div
+            class="splitter"
+            id="splitter"
+            role="separator"
+            aria-orientation="vertical"
+          ></div>
+          <div class="pane-console">
+            <div
+              id="consoleFindBar"
+              class="console-find-bar console-find-bar--hidden"
+              role="search"
+              aria-label="Find in console output"
+            >
+              <input
+                type="text"
+                id="consoleFindInput"
+                class="console-find-input"
+                spellcheck="false"
+                autocomplete="off"
+                placeholder="Find in console…"
+                aria-label="Find in console output"
+              />
+              <span
+                id="consoleFindCounts"
+                class="console-find-counts"
+                aria-live="polite"
+              ></span>
+              <button
+                type="button"
+                id="consoleFindPrev"
+                class="console-find-mini"
+                title="Previous match (Shift+Enter)"
+                aria-label="Previous match"
+              >
+                <i class="codicon codicon-arrow-up" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                id="consoleFindNext"
+                class="console-find-mini"
+                title="Next match (Enter)"
+                aria-label="Next match"
+              >
+                <i class="codicon codicon-arrow-down" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                id="consoleFindClose"
+                class="console-find-mini"
+                title="Close (Escape)"
+                aria-label="Close find"
+              >
+                <i class="codicon codicon-close" aria-hidden="true"></i>
+              </button>
+            </div>
+            <pre class="console-out" id="consoleOut"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  BEHAVE_RUN_SCRIPT_PLACEHOLDER
+</body>
+</html>

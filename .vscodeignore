@@ -1,0 +1,15 @@
+.gitignore
+.vscode
+.github
+_simplytest/**
+_behave_runner/**
+
+src/**
+example/**
+node_modules/**
+
+**/*.map
+**/dprint*
+**/tsconfig*
+**/eslint*
+**/esbuild*
