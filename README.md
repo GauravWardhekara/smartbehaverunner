@@ -125,6 +125,6 @@ Access these commands from the Command Palette (`Ctrl+Shift+P` on Windows/Linux,
 
 This extension is licensed under the [MIT License](LICENSE).
 
-Copyright (c) 2025-2026 Smart Behave Runner Contributors.  
+Copyright (c) 2025-2026 Gaurav Wardhekar and Smart Behave Runner Contributors.  
 Portions Copyright (c) 2025 Curve & SimplyTest (`behave-vsc`).  
 Portions Copyright (c) Remo Yukoff (`behave-runner`).

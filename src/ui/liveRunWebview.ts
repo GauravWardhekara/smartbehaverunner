@@ -14,7 +14,6 @@ import {
 } from "./livePanelProtocol";
 
 export const PRIMARY_LIVE_RUN_VIEW_TYPE = "smartBehave.liveRun";
-export const LEGACY_LIVE_RUN_VIEW_TYPE = "behaveRunner.liveRun";
 
 const LIVE_PANEL_CAPTURE_KEY = "behaveRunner.livePanelCapture.v1";
 /** Rough budget for `workspaceState` (limit is ~1MB per key). */
@@ -30,11 +29,7 @@ export async function revealLiveRunPanel(): Promise<void> {
   try {
     await vscode.commands.executeCommand("smartBehave.liveRun.focus");
   } catch {
-    try {
-      await vscode.commands.executeCommand("behaveRunner.liveRun.focus");
-    } catch {
-      /* view not ready */
-    }
+    /* view not ready */
   }
 }
 
@@ -155,7 +150,7 @@ export function registerLiveRunWebview(
   workspaceStateForLivePanel = context.workspaceState;
   const provider = new LiveRunWebviewProvider(context.extensionUri);
 
-  // 1. Primary view provider (smartBehave.liveRun)
+  // Register smartBehave.liveRun view provider
   try {
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(PRIMARY_LIVE_RUN_VIEW_TYPE, provider, {
@@ -164,17 +159,6 @@ export function registerLiveRunWebview(
     );
   } catch (err) {
     LOG.warn("Failed to register primary liveRun view provider:", err);
-  }
-
-  // 2. Legacy view provider fallback (behaveRunner.liveRun) - safely handled if already registered
-  try {
-    context.subscriptions.push(
-      vscode.window.registerWebviewViewProvider(LEGACY_LIVE_RUN_VIEW_TYPE, provider, {
-        webviewOptions: { retainContextWhenHidden: true }
-      })
-    );
-  } catch (err) {
-    LOG.info("Legacy behaveRunner.liveRun view provider already claimed by another extension; continuing.");
   }
 }
 
