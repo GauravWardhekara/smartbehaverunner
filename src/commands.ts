@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { LOG } from "./log";
 import {
   cancelActiveBehaveRun,
+  isBehaveRunActive,
   logBehaveRunCancel
 } from "./run/behaveRunCancellation";
 import { rerunLastBehaveRun } from "./run/behaveRunRerun";
@@ -13,7 +14,10 @@ import {
   getFeatureHierarchyNodeForPath,
   getScenarioNodeAtLine
 } from "./run/behaveHierarchyQueries";
-import { getBehaveHierarchyStoreRef } from "./run/behaveRunnerContext";
+import {
+  getBehaveHierarchyStoreRef,
+  getBehaveRunnerContext
+} from "./run/behaveRunnerContext";
 import {
   buildPythonBehaveDebugLaunchFromCliArgs,
   getJustMyCodeForResource
@@ -72,9 +76,26 @@ export function registerCommands(context: vscode.ExtensionContext): void {
     }
   };
 
-  const cancelRun = () => {
-    logBehaveRunCancel("command behave.cancelRun");
-    cancelActiveBehaveRun();
+  const cancelRun = async () => {
+    if (!isBehaveRunActive()) {
+      void vscode.window.showInformationMessage("No active Behave test is currently running.");
+      return;
+    }
+    const selection = await vscode.window.showWarningMessage(
+      "Are you sure you want to stop the running Behave test?",
+      { modal: true },
+      "Yes, Stop Test"
+    );
+    if (selection === "Yes, Stop Test") {
+      logBehaveRunCancel("command behave.cancelRun confirmed by user");
+      const ctx = getBehaveRunnerContext();
+      ctx?.runSinks.livePanel.post({
+        type: "raw_log",
+        text: "\r\n\x1b[33m[Smart Behave] Stop requested by user. Terminating test process...\x1b[0m\r\n"
+      });
+      cancelActiveBehaveRun();
+      void vscode.window.showInformationMessage("Behave test execution stopped.");
+    }
   };
 
   const rerunLast = async () => {

@@ -182,6 +182,10 @@ export class BehaveHierarchyStore {
     return this.roots.get(featureId(fsPath));
   }
 
+  getAllFeatures(): BehaveHierarchyNode[] {
+    return Array.from(this.roots.values());
+  }
+
   /**
    * Ensures a hierarchy root for an on-disk `.feature` under the open workspace.
    * Run/debug from CodeLens already targets this file; no second “inclusion” gate.

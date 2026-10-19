@@ -17,6 +17,8 @@ import {
   BEHAVE_SEMANTIC_TOKEN_LEGEND,
   BehaveSemanticTokensProvider
 } from "./language/featureSemanticTokensProvider";
+import { BehaveDocumentSymbolProvider } from "./language/featureDocumentSymbolProvider";
+import { BehaveHoverProvider } from "./language/stepHoverProvider";
 import { behaveDiagnosticsManager } from "./language/featureDiagnostics";
 import {
   registerBehaveHierarchyStore,
@@ -137,6 +139,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         featureSelector,
         new BehaveSemanticTokensProvider(),
         BEHAVE_SEMANTIC_TOKEN_LEGEND
+      ),
+      // Document Symbols (Outline and Breadcrumbs navigation for .feature files)
+      vscode.languages.registerDocumentSymbolProvider(
+        featureSelector,
+        new BehaveDocumentSymbolProvider()
+      ),
+      // Hover Information (Step definitions, signatures, and locations)
+      vscode.languages.registerHoverProvider(
+        featureSelector,
+        new BehaveHoverProvider()
       )
     );
 

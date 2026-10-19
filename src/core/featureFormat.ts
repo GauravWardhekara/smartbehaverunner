@@ -205,6 +205,7 @@ export function computeFeatureFormatLineEdits(
   let inDocString = false;
   let inRule = false;
   let inExamples = false;
+  let docStringLines: { line: number; text: string }[] = [];
 
   const lineCount = lines.length;
   const safeEnd = Math.min(endLine, Math.max(0, lineCount - 1));
@@ -216,30 +217,50 @@ export function computeFeatureFormatLineEdits(
     const text = lines[lineNum] ?? "";
 
     if (FORMAT_DOC_STRING_REGEX.test(text)) {
+      const docIndent = inRule ? INDENT.STEP + 2 : INDENT.STEP;
+      const indent = getIndentString(docIndent, baseIndent, indentChar);
+      const formatted = indent + text.trim();
+      if (formatted !== text) {
+        edits.push({ line: lineNum, newText: formatted });
+      }
+
       if (inDocString) {
-        const indent = getIndentString(
-          inRule ? INDENT.STEP + 2 : INDENT.STEP,
-          baseIndent,
-          indentChar
-        );
-        const formatted = indent + text.trim();
-        if (formatted !== text) {
-          edits.push({ line: lineNum, newText: formatted });
+        // Closing docstring: check if content is valid JSON
+        if (docStringLines.length > 0) {
+          const rawDoc = docStringLines.map((d) => d.text).join("\n").trim();
+          if (
+            (rawDoc.startsWith("{") && rawDoc.endsWith("}")) ||
+            (rawDoc.startsWith("[") && rawDoc.endsWith("]"))
+          ) {
+            try {
+              const parsed = JSON.parse(rawDoc);
+              const formattedJson = JSON.stringify(parsed, null, 2);
+              const jsonLines = formattedJson.split("\n");
+              const bodyIndent = getIndentString(docIndent + 2, baseIndent, indentChar);
+              if (jsonLines.length === docStringLines.length) {
+                for (let k = 0; k < jsonLines.length; k++) {
+                  const newLine = bodyIndent + jsonLines[k];
+                  if (newLine !== docStringLines[k].text) {
+                    edits.push({ line: docStringLines[k].line, newText: newLine });
+                  }
+                }
+              }
+            } catch {
+              // Not valid JSON, leave as is
+            }
+          }
         }
+        docStringLines = [];
         inDocString = false;
       } else {
-        const docIndent = inRule ? INDENT.STEP + 2 : INDENT.STEP;
-        const indent = getIndentString(docIndent, baseIndent, indentChar);
-        const formatted = indent + text.trim();
-        if (formatted !== text) {
-          edits.push({ line: lineNum, newText: formatted });
-        }
+        docStringLines = [];
         inDocString = true;
       }
       continue;
     }
 
     if (inDocString) {
+      docStringLines.push({ line: lineNum, text });
       continue;
     }
 

@@ -120,6 +120,10 @@ export function releaseActiveRunCancellation(
   cts.dispose();
 }
 
+export function isBehaveRunActive(): boolean {
+  return trackedBehaveSpawn != null || activeRunCancellation != null;
+}
+
 export function cancelActiveBehaveRun(): void {
   const hadSpawn = trackedBehaveSpawn != null && trackedBehaveSpawn.pid != null;
   const pid = hadSpawn ? trackedBehaveSpawn!.pid : undefined;

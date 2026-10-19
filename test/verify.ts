@@ -80,4 +80,19 @@ assert(gen.decoratorKeyword === "when", "Generated decorator is @when");
 assert(gen.paramNames.length === 2, "Extracted 2 parameters");
 assert(gen.code.includes("def step_impl(context,"), "Generated function signature with context and params");
 
+// 10. Verify JSON docstring formatting
+const docstringFeature = [
+  "Feature: Docstring test",
+  "  Scenario: Post JSON",
+  "    When I send payload:",
+  '      """',
+  '      {"name":"test","count":1}',
+  '      """'
+];
+const docEdits = computeFeatureFormatLineEdits(docstringFeature, 0, docstringFeature.length - 1, {
+  insertSpaces: true,
+  tabSize: 4
+});
+assert(docEdits.some(e => e.newText.includes('"""')), "Docstring delimiters formatted");
+
 console.log("\nALL VERIFICATION CHECKS PASSED!");

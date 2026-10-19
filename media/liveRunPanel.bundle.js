@@ -200,7 +200,7 @@
         setRowIcon(icon, "pending");
         return;
       }
-      if (scenarioDoneStatus[sk] === "pass") {
+      if (scenarioDoneStatus[sk] === "pass" || (scenarioDone[sk] && !scenarioFailed[sk] && !scenarioSkipped[sk])) {
         setRowIcon(icon, "pass");
         return;
       }
@@ -786,7 +786,7 @@
       if (!featureBody) ensureFeatureBody("(feature)");
       var orphan = document.createElement("details");
       orphan.className = "tree-node tree-scenario";
-      orphan.open = false;
+      orphan.open = true;
       var orow = makeSummaryRow(scenarioLabel || "(scenario)");
       applyTreeRowBleed(orow.sum, 1);
       var ob = document.createElement("div");
@@ -960,6 +960,7 @@
         ensureFeatureBody(m.label);
         refreshFeatureIcon();
         treeRoot.scrollTop = 0;
+        syncRunLayoutVisibility();
         return;
       }
       if (m.type === "scenario") {
@@ -993,11 +994,12 @@
             setSelected(mergeSum);
           }
           refreshConsoleIfLiveStepAppend();
+          syncRunLayoutVisibility();
           return;
         }
         var sdet = document.createElement("details");
         sdet.className = "tree-node tree-scenario";
-        sdet.open = false;
+        sdet.open = true;
         var srow = makeSummaryRow(m.name || "(scenario)");
         applyTreeRowBleed(srow.sum, 1);
         var sbody = document.createElement("div");
@@ -1026,6 +1028,7 @@
           setSelected(srow.sum);
         }
         refreshConsoleIfLiveStepAppend();
+        syncRunLayoutVisibility();
         return;
       }
       if (m.type === "scenario_finished") {
@@ -1038,16 +1041,19 @@
         }
         refreshScenarioIcon(fsk);
         refreshFeatureIcon();
+        syncRunLayoutVisibility();
         return;
       }
       if (m.type === "feature_finished") {
         featureFinishedKind = finalStatusKind(m.status);
         applyFeatureFinishedSweep(m.status);
+        syncRunLayoutVisibility();
         return;
       }
       if (m.type === "runCancelled") {
         featureRunCancelled = true;
         applyRunCancelledSweep();
+        syncRunLayoutVisibility();
         return;
       }
       if (m.type === "hook_stdout") {
@@ -1099,6 +1105,7 @@
         refreshScenarioIcon(ssk);
         refreshFeatureIcon();
         scrollTreeRootToBottomIfWasFollowing(followTreeTail);
+        syncRunLayoutVisibility();
         return;
       }
       if (m.type === "step") {
@@ -1171,6 +1178,7 @@
         refreshFeatureIcon();
         scrollTreeRootToBottomIfWasFollowing(followTreeTailStep);
         refreshConsoleIfLiveStepAppend();
+        syncRunLayoutVisibility();
       }
     }
     window.addEventListener("message", function(e) {
