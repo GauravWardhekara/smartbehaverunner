@@ -51,7 +51,18 @@
         "extensions": [
           ".feature"
         ],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./media/gherkin-light.svg",
+          "dark": "./media/gherkin-dark.svg"
+        }
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "smart-behave-icons",
+        "label": "Smart Behave (Gherkin)",
+        "path": "./icons/icon-theme.json"
       }
     ],
     "snippets": [
