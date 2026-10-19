@@ -1,6 +1,8 @@
-import { escapeBehaveNameSelect } from "../core";
+import * as path from "path";
 import * as vscode from "vscode";
+import { escapeBehaveNameSelect } from "../core";
 import type { BehaveJob } from "./behaveJobTypes";
+import { getLaunchJsonSmartBehaveArgs } from "./behaveLaunchConfig";
 
 export function getJustMyCodeForResource(resourcePath: string): boolean {
   const resourceUri = vscode.Uri.file(resourcePath);
@@ -25,10 +27,12 @@ export function getBehaveExtraArgsForResource(resourcePath: string): string[] {
   const raw = vscode.workspace
     .getConfiguration("behaveRunner", resourceUri)
     .get<unknown>("behave.extraArgs", []);
-  if (!Array.isArray(raw)) {
-    return [];
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw.filter((item): item is string => typeof item === "string");
   }
-  return raw.filter((item): item is string => typeof item === "string");
+  const folder = vscode.workspace.getWorkspaceFolder(resourceUri);
+  const root = folder ? folder.uri.fsPath : path.dirname(resourcePath);
+  return getLaunchJsonSmartBehaveArgs(root);
 }
 
 export type PythonBehaveDebugLaunch = {

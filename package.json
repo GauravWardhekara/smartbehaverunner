@@ -58,13 +58,6 @@
         }
       }
     ],
-    "iconThemes": [
-      {
-        "id": "smart-behave-icons",
-        "label": "Smart Behave (Gherkin)",
-        "path": "./icons/icon-theme.json"
-      }
-    ],
     "snippets": [
       {
         "language": "behave",

@@ -95,4 +95,16 @@ const docEdits = computeFeatureFormatLineEdits(docstringFeature, 0, docstringFea
 });
 assert(docEdits.some(e => e.newText.includes('"""')), "Docstring delimiters formatted");
 
+// 11. Verify smartBehaveArgs launch config parser
+const { splitCommandLineArgs, getLaunchJsonSmartBehaveArgs } = require("../src/run/behaveLaunchConfig");
+const sampleArgs = "-D property_file=configs/config.properties -D endpoint_file=endpoints.json -D caps_file=ios_caps_v5.json -D log_level=DEBUG";
+const split = splitCommandLineArgs(sampleArgs);
+assert(split.length === 8, `splitCommandLineArgs split 8 args (actual: ${split.length})`);
+assert(split[0] === "-D" && split[1] === "property_file=configs/config.properties", "First -D arg matches");
+assert(split[7] === "log_level=DEBUG", "Last -D arg matches");
+
+const exampleLaunchJsonArgs = getLaunchJsonSmartBehaveArgs(path.resolve(__dirname, "../example"));
+assert(exampleLaunchJsonArgs.length === 8, `Parsed example launch.json args (actual: ${exampleLaunchJsonArgs.length})`);
+assert(exampleLaunchJsonArgs[3] === "endpoint_file=endpoints.json", "Parsed endpoint_file argument");
+
 console.log("\nALL VERIFICATION CHECKS PASSED!");

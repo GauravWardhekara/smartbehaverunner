@@ -32,6 +32,7 @@ import { registerBehaveOutputChannel } from "./run/behaveRunOutput";
 import { registerBehaveRunWorkspacePersistence } from "./run/behaveRunLastRun";
 import { registerLiveRunWebview } from "./ui/liveRunWebview";
 import { getExtension } from "./utils/python";
+import { ensureLaunchJsonWithSmartBehaveArgs } from "./run/behaveLaunchConfig";
 
 let isActivated = false;
 
@@ -171,7 +172,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void behaveTestController.discoverAll();
     }
 
-    // 7. Watch document changes for test controller & diagnostics
+    // 8. Provision launch.json with smartBehaveArgs if missing
+    const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+    for (const folder of workspaceFolders) {
+      void ensureLaunchJsonWithSmartBehaveArgs(folder.uri.fsPath);
+    }
+
+    // 9. Watch document changes for test controller & diagnostics
     context.subscriptions.push(
       vscode.window.onDidChangeActiveTextEditor((editor) => {
         if (editor?.document.fileName.endsWith(".feature")) {
@@ -190,7 +197,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           }
         }
       }),
-      vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      vscode.workspace.onDidChangeWorkspaceFolders((e) => {
+        for (const added of e.added) {
+          void ensureLaunchJsonWithSmartBehaveArgs(added.uri.fsPath);
+        }
         if (settings.autoDiscover()) {
           void behaveTestController.discoverAll();
         }
