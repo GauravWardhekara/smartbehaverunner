@@ -78,6 +78,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const featureSelector: vscode.DocumentSelector = [
       { language: "behave", scheme: "file" },
       { language: "feature", scheme: "file" },
+      { language: "gherkin", scheme: "file" },
       { pattern: "**/*.feature" },
     ];
     const pythonSelector: vscode.DocumentSelector = [

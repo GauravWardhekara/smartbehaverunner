@@ -34,7 +34,12 @@ class BehaveCodeLensProvider implements vscode.CodeLensProvider {
     if (!settings.codeLens()) {
       return [];
     }
-    if (document.languageId !== "behave" && document.languageId !== "feature" && !document.fileName.endsWith(".feature")) {
+    if (
+      document.languageId !== "behave" &&
+      document.languageId !== "feature" &&
+      document.languageId !== "gherkin" &&
+      !document.fileName.endsWith(".feature")
+    ) {
       return [];
     }
 
@@ -115,6 +120,7 @@ export function registerBehaveCodeLens(
   const selector: vscode.DocumentSelector = [
     { language: "behave", scheme: "file" },
     { language: "feature", scheme: "file" },
+    { language: "gherkin", scheme: "file" },
     { pattern: "**/*.feature" }
   ];
 
