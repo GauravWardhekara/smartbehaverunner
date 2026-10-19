@@ -1,14 +1,21 @@
 import * as path from "path";
 import * as vscode from "vscode";
-import { parseStepLinePrefixForCompletion } from "../core/stepMatcher";
+import {
+  getStepTextInvariants,
+  parseStepLinePrefixForCompletion
+} from "../core/stepMatcher";
 import { StepDefinition, StepKeyword } from "../core/types";
 import { stepDefinitionIndex } from "./stepIndex";
 
-function behavePatternToSnippet(pattern: string): string {
+export function behavePatternToSnippet(pattern: string): string {
   let snippetIndex = 1;
-  return pattern.replace(/\{(\w*)(?::\w)?\}/g, (_, name: string) => {
-    return `\${${snippetIndex++}:${name || "param"}}`;
-  });
+  return pattern.replace(
+    /\{([^{}:]*)(?::([^{}]+))?\}/g,
+    (_, name: string, type: string) => {
+      const placeholder = (name || type || "param").trim();
+      return `\${${snippetIndex++}:${placeholder}}`;
+    }
+  );
 }
 
 function filterDefinitionsByKeyword(
@@ -80,28 +87,31 @@ export class BehaveCompletionItemProvider implements vscode.CompletionItemProvid
     const workspacePath = folder?.uri.fsPath;
 
     const items: vscode.CompletionItem[] = [];
-    for (let i = 0; i < unique.length; i++) {
-      const def = unique[i];
-      const snippetText = behavePatternToSnippet(def.pattern);
+    let sortIndex = 0;
+    for (const def of unique) {
+      const variants = getStepTextInvariants(def.pattern);
       const relativePath = workspacePath
         ? path.relative(workspacePath, def.filePath)
         : path.basename(def.filePath);
 
-      const item = new vscode.CompletionItem(def.pattern, vscode.CompletionItemKind.Snippet);
-      item.insertText = new vscode.SnippetString(snippetText);
-      item.detail = `${def.keyword} step`;
-      item.documentation = new vscode.MarkdownString(
-        `Defined in [${relativePath}:${def.line + 1}](${vscode.Uri.file(def.filePath).toString()}#L${def.line + 1})`
-      );
-      item.sortText = String(i).padStart(5, "0");
-      item.range = new vscode.Range(
-        position.line,
-        keywordEnd,
-        position.line,
-        lineText.length
-      );
+      for (const variant of variants) {
+        const snippetText = behavePatternToSnippet(variant);
+        const item = new vscode.CompletionItem(variant, vscode.CompletionItemKind.Snippet);
+        item.insertText = new vscode.SnippetString(snippetText);
+        item.detail = `${def.keyword} step`;
+        item.documentation = new vscode.MarkdownString(
+          `Defined in [${relativePath}:${def.line + 1}](${vscode.Uri.file(def.filePath).toString()}#L${def.line + 1})`
+        );
+        item.sortText = String(sortIndex++).padStart(5, "0");
+        item.range = new vscode.Range(
+          position.line,
+          keywordEnd,
+          position.line,
+          lineText.length
+        );
 
-      items.push(item);
+        items.push(item);
+      }
     }
 
     return items;

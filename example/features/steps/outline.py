@@ -1,5 +1,11 @@
 from behave import given, when, then
-from hamcrest import assert_that, equal_to
+try:
+    from hamcrest import assert_that, equal_to
+except ImportError:
+    def assert_that(actual, matcher):
+        assert matcher(actual)
+    def equal_to(expected):
+        return lambda actual: actual == expected
 
 @given('I put "{thing}" in a blender')
 def step_given_put_thing_into_blender(context, thing):

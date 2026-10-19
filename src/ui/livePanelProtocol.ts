@@ -46,7 +46,10 @@ export type LivePanelToWebviewMessage =
       gotoLine?: number;
     }
   | { type: "step_log_append"; stepKey: string; scenarioKey: string; text: string }
-  | { type: "runCancelled" };
+  | { type: "runCancelled" }
+  | { type: "raw_log"; text: string }
+  | { type: "run_started"; label: string; command?: string }
+  | { type: "run_finished"; exitCode: number; duration?: number };
 
 /** Messages from the Live run webview to the extension host. */
 export type LivePanelFromWebviewMessage =
@@ -79,7 +82,10 @@ const HOST_TO_WEBVIEW_TYPES = new Set([
   "hook_stdout",
   "step",
   "step_log_append",
-  "runCancelled"
+  "runCancelled",
+  "raw_log",
+  "run_started",
+  "run_finished"
 ]);
 
 /** Best-effort guard before posting to the webview (extension host side). */

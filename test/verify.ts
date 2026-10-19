@@ -57,4 +57,27 @@ console.log(`PASS: Computed ${edits.length} formatting edits`);
 assert(escapeBehaveNameSelect("First") === "^First$", "escapeBehaveNameSelect anchors with ^ and $");
 assert(escapeBehaveNameSelect("Hello (World) [test]") === "^Hello \\(World\\) \\[test\\]$", "escapeBehaveNameSelect escapes regex symbols");
 
+// 7. Verify enhanced step expressions (Behave parse types & Cucumber expressions)
+const { behavePatternToRegex, getStepTextInvariants } = require("../src/core/stepMatcher");
+assert(behavePatternToRegex("I have {n:d} apples").test("I have 42 apples"), "Matches integer placeholder {n:d}");
+assert(behavePatternToRegex("the cost is {cost:f}").test("the cost is 19.99"), "Matches float placeholder {cost:f}");
+assert(behavePatternToRegex("user {name:w} logs in").test("user Alice logs in"), "Matches word placeholder {name:w}");
+assert(behavePatternToRegex("user {word} logs in").test("user Alice logs in"), "Matches Cucumber {word}");
+assert(behavePatternToRegex("user {string} logs in").test('user "Bob" logs in'), "Matches Cucumber {string}");
+assert(behavePatternToRegex("I buy {count:int} items").test("I buy 5 items"), "Matches Cucumber {int}");
+assert(behavePatternToRegex("I have an apple(s)").test("I have an apple"), "Matches singular with optional (s)");
+assert(behavePatternToRegex("I have an apple(s)").test("I have an apples"), "Matches plural with optional (s)");
+assert(behavePatternToRegex("I select red/blue").test("I select red"), "Matches alternative word slash red/blue");
+
+// 8. Verify pattern invariants expansion
+const variants = getStepTextInvariants("user logs in/out");
+assert(variants.length === 2 && variants.includes("user logs in") && variants.includes("user logs out"), "Expands slash invariants");
+
+// 9. Verify Python step snippet generation
+const { generateStepSnippet } = require("../src/core/stepSnippetGenerator");
+const gen = generateStepSnippet("when", 'I enter "alice" and 3 items');
+assert(gen.decoratorKeyword === "when", "Generated decorator is @when");
+assert(gen.paramNames.length === 2, "Extracted 2 parameters");
+assert(gen.code.includes("def step_impl(context,"), "Generated function signature with context and params");
+
 console.log("\nALL VERIFICATION CHECKS PASSED!");

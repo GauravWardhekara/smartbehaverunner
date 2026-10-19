@@ -62,9 +62,17 @@
     }
     function syncRunLayoutVisibility() {
       var hasTree = treeRoot && treeRoot.childElementCount > 0;
-      if (hasTree) {
+      var hasLogs = (consoleOut && consoleOut.textContent && consoleOut.textContent.trim().length > 0) || (logFeature && logFeature.length > 0);
+      if (hasTree || hasLogs) {
         shell.classList.remove("hidden");
         emptyPlaceholder.classList.add("hidden");
+        if (!hasTree) {
+          paneTree.style.display = "none";
+          splitter.style.display = "none";
+        } else {
+          paneTree.style.display = "";
+          splitter.style.display = "";
+        }
       } else {
         shell.classList.add("hidden");
         emptyPlaceholder.classList.remove("hidden");
@@ -269,6 +277,21 @@
     }
     function escapeHtml(s) {
       return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    function ansiToHtml(text) {
+      var esc = escapeHtml(text);
+      return esc
+        .replace(/\x1b\[0m/g, "</span>")
+        .replace(/\x1b\[1m/g, '<span style="font-weight:bold;">')
+        .replace(/\x1b\[2m|\x1b\[90m/g, '<span style="color:var(--vscode-descriptionForeground, #888);">')
+        .replace(/\x1b\[31m|\x1b\[91m/g, '<span style="color:var(--vscode-testing-iconFailed, #f14c4c);">')
+        .replace(/\x1b\[32m|\x1b\[92m/g, '<span style="color:var(--vscode-testing-iconPassed, #73c991);">')
+        .replace(/\x1b\[33m|\x1b\[93m/g, '<span style="color:var(--vscode-editorWarning-foreground, #cca700);">')
+        .replace(/\x1b\[34m|\x1b\[94m/g, '<span style="color:var(--vscode-textLink-foreground, #3794ff);">')
+        .replace(/\x1b\[35m|\x1b\[95m/g, '<span style="color:var(--vscode-symbolIcon-colorForeground, #b180d7);">')
+        .replace(/\x1b\[36m|\x1b\[96m/g, '<span style="color:var(--vscode-terminal-ansiCyan, #29b8db);">')
+        .replace(/\x1b\[37m|\x1b\[97m/g, '<span style="color:var(--vscode-foreground, #ccc);">')
+        .replace(/\x1b\[[0-9;]*m/g, "");
     }
     function setRowTooltip(el, text) {
       var t = text == null ? "" : String(text);
@@ -493,10 +516,10 @@
           err = String(seg.e || "").replace(/\r\n/g, "\n").replace(/^\n+/, "");
         }
         if (head) {
-          html += '<span class="console-line">' + escapeHtml(head) + "</span>";
+          html += '<span class="console-line">' + ansiToHtml(head) + "</span>";
         }
         if (err && err.trim()) {
-          html += '<span class="console-err">' + escapeHtml(err) + "</span>";
+          html += '<span class="console-err">' + ansiToHtml(err) + "</span>";
         }
       }
       if (!html.trim()) {
@@ -563,7 +586,11 @@
       renderLogSegments([{ p: head, e: err }], followTailIfNearBottom);
     }
     function refreshConsoleIfLiveStepAppend() {
-      if (!selectedEl || !selectedEl.dataset) return;
+      if (!selectedEl || !selectedEl.dataset) {
+        renderLogSegments(logFeature, true);
+        syncRunLayoutVisibility();
+        return;
+      }
       var ds = selectedEl.dataset;
       if (ds.logScope === "feature") {
         renderLogSegments(logFeature, true);
@@ -571,7 +598,10 @@
         renderLogSegments(logByScenario[ds.scenarioKey] || [], true);
       } else if (selectedEl.classList && selectedEl.classList.contains("tree-step") && ds.stepKey) {
         showStepConsole(ds.stepKey, true);
+      } else {
+        renderLogSegments(logFeature, true);
       }
+      syncRunLayoutVisibility();
     }
     function bumpFeature(t) {
       if (t) pushLogSegment(logFeature, t, "");
@@ -844,7 +874,7 @@
         return;
       }
       if (!livePanelProtocolOk) {
-        if (m.type === "replayCapture" || m.type === "clear" || m.type === "feature") {
+        if (m.type === "replayCapture" || m.type === "clear" || m.type === "feature" || m.type === "run_started" || m.type === "raw_log") {
           livePanelProtocolOk = true;
         } else {
           return;
@@ -882,6 +912,44 @@
         liveFollowSelection = true;
         hideConsoleFind({ resetQuery: true });
         if (consoleOut) consoleOut.textContent = "";
+        syncRunLayoutVisibility();
+        return;
+      }
+      if (m.type === "run_started") {
+        featureRunCancelled = false;
+        featureFinishedKind = "";
+        liveFollowSelection = true;
+        treeRoot.innerHTML = "";
+        featureBody = null;
+        currentScenarioSteps = null;
+        logFeature.length = 0;
+        logByScenario = /* @__PURE__ */ Object.create(null);
+        logByStep = /* @__PURE__ */ Object.create(null);
+        selectedEl = null;
+        if (consoleOut) consoleOut.textContent = "";
+        var timeStr = new Date().toLocaleTimeString();
+        var banner = "\x1b[36m▶ Running: " + (m.label || "Behave tests") + " (" + timeStr + ")\x1b[0m\r\n";
+        if (m.command) {
+          banner += "\x1b[90m$ " + m.command + "\x1b[0m\r\n";
+        }
+        banner += "\x1b[90m" + "─".repeat(60) + "\x1b[0m\r\n";
+        bumpFeature(banner);
+        renderLogSegments(logFeature, true);
+        syncRunLayoutVisibility();
+        return;
+      }
+      if (m.type === "raw_log") {
+        var rt = m.text;
+        if (rt == null || rt === "") return;
+        bumpFeature(rt);
+        if (selectedEl && selectedEl.dataset && selectedEl.dataset.logScope === "scenario" && selectedEl.dataset.scenarioKey) {
+          bumpScenario(selectedEl.dataset.scenarioKey, rt);
+        }
+        refreshConsoleIfLiveStepAppend();
+        syncRunLayoutVisibility();
+        return;
+      }
+      if (m.type === "run_finished") {
         syncRunLayoutVisibility();
         return;
       }

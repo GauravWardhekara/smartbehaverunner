@@ -4,13 +4,43 @@ import { StepDefinition, StepKeyword } from "./types";
  * Behave type placeholders and their regex equivalents
  * See: https://behave.readthedocs.io/en/stable/parse.html
  */
-const BEHAVE_TYPE_PATTERNS: Record<string, string> = {
-  d: "-?\\d+", // integer
-  f: "-?\\d+\\.?\\d*", // float
-  w: "\\w+", // word
+/**
+ * Behave type placeholders and their regex equivalents
+ * Supports standard Python parse types, Behave extensions, and Cucumber expressions.
+ * See: https://behave.readthedocs.io/en/stable/parse.html
+ * See: https://cucumber.io/docs/cucumber/cucumber-expressions/
+ */
+export const BEHAVE_TYPE_PATTERNS: Record<string, string> = {
+  // Behave / Python parse built-in format types
+  d: "-?\\d+", // integer (base 10)
+  f: "-?\\d*(?:\\.\\d+)?", // float
+  g: "-?\\d*(?:\\.\\d+)?(?:[eE][-+]?\\d+)?", // general number (float or exp)
+  w: "\\w+", // letters, numbers and underscore
   W: "\\W+", // non-word
   s: "\\s+", // whitespace
   S: "\\S+", // non-whitespace
+  n: "(?:0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-fA-F]+|-?\\d+)", // base-prefixed number
+  b: "-?[01]+", // binary
+  o: "-?[0-7]+", // octal
+  x: "-?[0-9a-fA-F]+", // hexadecimal (lower)
+  X: "-?[0-9a-fA-F]+", // hexadecimal (upper)
+  th: "\\d{1,2}:\\d{2}(?::\\d{2})?", // time (hh:mm[:ss])
+  ti: "\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?)?", // ISO 8601 date/time
+  te: "(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \\d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \\d{4} \\d{2}:\\d{2}:\\d{2}", // RFC 2822
+  tc: "(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [ \\d]\\d \\d{2}:\\d{2}:\\d{2} \\d{4}", // ctime
+
+  // Cucumber expression types
+  int: "-?\\d+",
+  float: "-?\\d*(?:\\.\\d+)?",
+  double: "-?\\d*(?:\\.\\d+)?",
+  bigdecimal: "-?\\d*(?:\\.\\d+)?",
+  biginteger: "-?\\d+",
+  byte: "-?\\d+",
+  short: "-?\\d+",
+  long: "-?\\d+",
+  word: "[^\\s]+",
+  string: "(?:\"[^\"]*\"|'[^']*')",
+  stringInDoubleQuotes: "\"[^\"]*\"",
 };
 
 /**
@@ -23,24 +53,93 @@ const DEFAULT_PLACEHOLDER_PATTERN = ".+";
  */
 const OUTLINE_PLACEHOLDER_PATTERN = "<[^>]+>";
 
+/**
+ * Expands alternatives in a step pattern (like `a/b` or `(a|b)`) into individual variants.
+ */
+export function getStepTextInvariants(pattern: string): string[] {
+  // Handle alternatives like (a|b) or (?:a|b)
+  const groupMatch = pattern.match(/\((?:\?:)?([^()|]+(?:\|[^()|]+)+)\)/);
+  if (groupMatch && groupMatch[1]) {
+    const fullGroup = groupMatch[0];
+    const options = groupMatch[1].split("|");
+    const results: string[] = [];
+    for (const opt of options) {
+      const replaced = pattern.replace(fullGroup, opt);
+      results.push(...getStepTextInvariants(replaced));
+    }
+    return results;
+  }
+
+  // Handle slash alternatives like red/blue/green
+  const slashMatch = pattern.match(/\b([a-zA-Z]+)(?:\/([a-zA-Z]+))+\b/);
+  if (slashMatch) {
+    const fullSlash = slashMatch[0];
+    const options = fullSlash.split("/");
+    const results: string[] = [];
+    for (const opt of options) {
+      const replaced = pattern.replace(fullSlash, opt);
+      results.push(...getStepTextInvariants(replaced));
+    }
+    return results;
+  }
+
+  return [pattern];
+}
+
 function buildBehavePatternRegexBody(
   pattern: string,
   capturePlaceholders: boolean
 ): string {
-  let regexStr = pattern.replace(/[.*+?^${}()|[\]\\]/g, (char) => {
-    if (char === "{" || char === "}") {
-      return char;
+  // 1. Pre-process word alternatives like red/blue -> (?:red|blue)
+  let processed = pattern.replace(
+    /\b([a-zA-Z]+)(?:\/([a-zA-Z]+))+\b/g,
+    (match) => `(?:${match.replace(/\//g, "|")})`
+  );
+
+  // 2. Pre-process optional text like apple(s) or (a ) -> (?:s)? or (?:a )?
+  processed = processed.replace(
+    /\(([a-zA-Z\s]+)\)\??/g,
+    "(?:$1)?"
+  );
+
+  // 3. Tokenize regex groups and placeholders
+  const tokens: string[] = [];
+  const tokenized = processed.replace(
+    /(?:\(\?:[^\)]+\)\??|\{[^{}]*\})/g,
+    (m) => {
+      tokens.push(m);
+      return `__TOKEN_${tokens.length - 1}__`;
     }
-    return "\\" + char;
-  });
+  );
+
+  let regexStr = tokenized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   let captureIndex = 0;
-  regexStr = regexStr.replace(/\{(\w*)(?::(\w))?\}/g, (_, _name, type) => {
-    const typePattern =
-      type && BEHAVE_TYPE_PATTERNS[type]
-        ? BEHAVE_TYPE_PATTERNS[type]
-        : DEFAULT_PLACEHOLDER_PATTERN;
+  regexStr = regexStr.replace(/__TOKEN_(\d+)__/g, (_, idxStr) => {
+    const token = tokens[Number(idxStr)];
+    if (token.startsWith("(?:")) {
+      return token; // Preserved alternative/optional regex group
+    }
 
+    const m = token.match(/^\{([^{}:]*)(?::([^{}]+))?\}$/);
+    if (!m) {
+      return "\\{\\}";
+    }
+    const namePart = (m[1] ?? "").trim();
+    const typePart = (m[2] ?? "").trim();
+
+    let resolvedType: string | undefined;
+    if (typePart && BEHAVE_TYPE_PATTERNS[typePart]) {
+      resolvedType = BEHAVE_TYPE_PATTERNS[typePart];
+    } else if (!typePart && namePart && BEHAVE_TYPE_PATTERNS[namePart]) {
+      // Cucumber expression style: e.g. {int}, {float}, {string}, {word}
+      resolvedType = BEHAVE_TYPE_PATTERNS[namePart];
+    } else if (typePart) {
+      // Unknown custom type e.g. {user:CustomType} -> match non-whitespace
+      resolvedType = "[^\\s]+";
+    }
+
+    const typePattern = resolvedType || DEFAULT_PLACEHOLDER_PATTERN;
     const inner = `(?:${typePattern}|${OUTLINE_PLACEHOLDER_PATTERN})`;
     if (capturePlaceholders) {
       const g = `p${captureIndex++}`;

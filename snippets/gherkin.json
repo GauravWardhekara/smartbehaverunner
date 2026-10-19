@@ -1,0 +1,123 @@
+{
+  "Feature": {
+    "prefix": "Feature",
+    "body": [
+      "Feature: ${1:Feature Name}",
+      "    As a ${2:role}",
+      "    I want ${3:goal}",
+      "    So that ${4:benefit}",
+      "",
+      "    Scenario: ${5:Scenario Name}",
+      "        Given ${6:initial condition}",
+      "        When ${7:action occurs}",
+      "        Then ${8:expected outcome}"
+    ],
+    "description": "Standard BDD Feature file structure with narrative and initial scenario"
+  },
+  "Scenario": {
+    "prefix": "Scenario",
+    "body": [
+      "Scenario: ${1:Scenario Name}",
+      "    Given ${2:initial condition}",
+      "    When ${3:action occurs}",
+      "    Then ${4:expected outcome}"
+    ],
+    "description": "BDD Scenario with Given, When, Then steps"
+  },
+  "Scenario Outline": {
+    "prefix": "Scenario Outline",
+    "body": [
+      "Scenario Outline: ${1:Scenario Outline Name}",
+      "    Given ${2:there are <start> items}",
+      "    When ${3:I take <count> items}",
+      "    Then ${4:I should have <left> items}",
+      "",
+      "    Examples:",
+      "        | start | count | left |",
+      "        | ${5:10}  | ${6:3}     | ${7:7}    |",
+      "        | ${8:5}   | ${9:2}     | ${10:3}   |"
+    ],
+    "description": "Parameterized Scenario Outline with Examples data table"
+  },
+  "Background": {
+    "prefix": "Background",
+    "body": [
+      "Background:",
+      "    Given ${1:common prerequisite step}"
+    ],
+    "description": "Feature Background for shared setup steps"
+  },
+  "Rule": {
+    "prefix": "Rule",
+    "body": [
+      "Rule: ${1:Business Rule Name}",
+      "",
+      "    Scenario: ${2:Scenario under this rule}",
+      "        Given ${3:condition}",
+      "        When ${4:action}",
+      "        Then ${5:outcome}"
+    ],
+    "description": "Gherkin Rule for grouping business rules"
+  },
+  "Examples": {
+    "prefix": "Examples",
+    "body": [
+      "Examples:",
+      "    | ${1:header1} | ${2:header2} |",
+      "    | ${3:val1}    | ${4:val2}    |"
+    ],
+    "description": "Examples data table for Scenario Outline"
+  },
+  "Data Table": {
+    "prefix": "table",
+    "body": [
+      "| ${1:column1} | ${2:column2} |",
+      "| ${3:value1}  | ${4:value2}  |"
+    ],
+    "description": "Gherkin step data table"
+  },
+  "Docstring": {
+    "prefix": "docstring",
+    "body": [
+      "\"\"\"",
+      "${1:multiline content}",
+      "\"\"\""
+    ],
+    "description": "Triple-quoted multi-line text block"
+  },
+  "Given Step": {
+    "prefix": "Given",
+    "body": [
+      "Given ${1:step text}"
+    ],
+    "description": "Given step"
+  },
+  "When Step": {
+    "prefix": "When",
+    "body": [
+      "When ${1:step text}"
+    ],
+    "description": "When step"
+  },
+  "Then Step": {
+    "prefix": "Then",
+    "body": [
+      "Then ${1:step text}"
+    ],
+    "description": "Then step"
+  },
+  "And Step": {
+    "prefix": "And",
+    "body": [
+      "And ${1:step text}"
+    ],
+    "description": "And step"
+  },
+  "But Step": {
+    "prefix": "But",
+    "body": [
+      "But ${1:step text}"
+    ],
+    "description": "But step"
+  }
+}

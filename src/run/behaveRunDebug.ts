@@ -30,9 +30,19 @@ export async function runBehaveDebugJobs(
     if (jobs.length > 0) {
       const j0 = jobs[0];
       await resolveBehaveFeatureChildrenIfNeeded(j0.featureItem);
+      const title = j0.kind === "scenario" ? `Debug Scenario: ${j0.scenarioName}` : `Debug Feature: ${j0.featureItem.label}`;
+      ctx.runSinks.livePanel.post({
+        type: "run_started",
+        label: title,
+        command: "debugpy (Python Interactive Debugger)"
+      });
       ctx.runSinks.livePanel.post({
         type: "feature",
         label: j0.featureItem.label
+      });
+      ctx.runSinks.livePanel.post({
+        type: "raw_log",
+        text: `\x1b[36m▶ Starting Python Debug Session for ${title}...\x1b[0m\r\n\x1b[90mAttach debugger via debugpy. Breakpoints and step debugging active.\x1b[0m\r\n\r\n`
       });
     }
   }

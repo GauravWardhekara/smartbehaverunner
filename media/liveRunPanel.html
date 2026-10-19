@@ -504,7 +504,11 @@
     </header>
     <div class="view-body">
       <div id="emptyPlaceholder" class="empty-placeholder">
-        Nothing to show
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; opacity:0.85; text-align:center; padding: 20px;">
+          <i class="codicon codicon-terminal" style="font-size:32px; color:var(--vscode-testing-iconPassed, #73c991);"></i>
+          <span style="font-weight:600; font-size:14px; color:var(--vscode-foreground, #ccc);">Smart Behave Live Output</span>
+          <span style="font-size:12px; max-width:320px; opacity:0.75; line-height: 1.5;">Run a test from Test Explorer, editor CodeLens, or click ▶ in the toolbar to stream live terminal logs here in realtime.</span>
+        </div>
       </div>
       <div class="shell hidden" id="shell">
         <div class="shell-main" id="shellMain">

@@ -99,6 +99,12 @@ async function runBehaveJob(
   }
 
   let exitCode = 0;
+  const startTime = Date.now();
+  const runLabel =
+    runJob.kind === "scenario"
+      ? `Scenario: ${runJob.scenarioName}`
+      : `Feature: ${featureItem.label}`;
+  const cmdDisplay = `${interpreter.path ? interpreter.path : "python"} -m behave ${path.basename(fsPath)}`;
 
   function livePanelSinkWrap(message: LivePanelToWebviewMessage): void {
     if (!isCurrentBehaveLiveSession(liveSessionId)) {
@@ -109,6 +115,11 @@ async function runBehaveJob(
 
   try {
     if (!liveOpts?.skipLivePanelReset) {
+      sinks.livePanel.post({
+        type: "run_started",
+        label: runLabel,
+        command: cmdDisplay
+      });
       sinks.livePanel.post({
         type: "feature",
         label: featureItem.label
@@ -231,7 +242,7 @@ async function runBehaveJob(
         }
         const text = chunk.toString();
         for (const line of ndjsonBuf.consumeChunk(text)) {
-          /* Full stdout mirror (including NDJSON) for the Output channel — debuggable trace; the Live panel stays human-only via structured messages. */
+          /* Full stdout mirror (including NDJSON) for the Output channel */
           sinks.output.append(line);
           if (!isCurrentBehaveLiveSession(liveSessionId)) {
             return;
@@ -239,18 +250,53 @@ async function runBehaveJob(
           const ev = parseLiveStreamLine(line);
           if (ev) {
             dispatchLiveStreamEvent(ev, liveDispatchCtx);
+            let evLog = "";
+            if (ev.event === "scenario_started") {
+              evLog = `\r\n\x1b[36m━━ Scenario: ${ev.scenario}\x1b[0m\r\n`;
+            } else if (ev.event === "step_started") {
+              evLog = `  \x1b[34m▶ ${ev.keyword || ""} ${ev.step || ""}\x1b[0m\r\n`;
+            } else if (ev.event === "step_finished") {
+              const statusColor = ev.status === "passed" ? "\x1b[32m" : ev.status === "skipped" ? "\x1b[33m" : "\x1b[31m";
+              const mark = ev.status === "passed" ? "✔" : ev.status === "skipped" ? "↷" : "✘";
+              evLog = `  ${statusColor}${mark} ${ev.keyword || ""} ${ev.step || ""} (${ev.status})\x1b[0m\r\n`;
+              if (ev.error) {
+                evLog += `\x1b[31m${ev.error}\x1b[0m\r\n`;
+              }
+            } else if (ev.event === "scenario_finished") {
+              const statusColor = ev.status === "passed" ? "\x1b[32m" : "\x1b[31m";
+              evLog = `${statusColor}── Finished: ${ev.scenario} (${ev.status})\x1b[0m\r\n`;
+            }
+            if (evLog) {
+              livePanelSinkWrap({
+                type: "raw_log",
+                text: evLog
+              });
+            }
           } else {
             appendPlainStdoutLine(line);
+            livePanelSinkWrap({
+              type: "raw_log",
+              text: line + "\r\n"
+            });
           }
         }
       };
 
       proc.stdout.on("data", onStdoutChunk);
       proc.stderr.on("data", (chunk: Buffer) => {
-        /* Shell wrapper noise only: Behave stderr is merged into stdout via 2>&1. */
-        sinks.output.append(chunk.toString());
+        const text = chunk.toString();
+        sinks.output.append(text);
+        livePanelSinkWrap({
+          type: "raw_log",
+          text: `\x1b[31m${text}\x1b[0m`
+        });
       });
       proc.on("error", (err) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        livePanelSinkWrap({
+          type: "raw_log",
+          text: `\r\n\x1b[31m[Process Error] Failed to execute Behave: ${msg}\x1b[0m\r\n`
+        });
         rejectPromise(err);
       });
       proc.on("close", (code) => {
@@ -264,12 +310,28 @@ async function runBehaveJob(
               dispatchLiveStreamEvent(ev, liveDispatchCtx);
             } else {
               appendPlainStdoutLine(tail);
+              livePanelSinkWrap({
+                type: "raw_log",
+                text: tail + "\r\n"
+              });
             }
           }
         }
         if (isCurrentBehaveLiveSession(liveSessionId)) {
           flushPendingHookStdout(liveDispatchCtx, {
             scenarioKey: hookFlushState.lastScenarioKey
+          });
+          const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
+          const statusColor = exitCode === 0 ? "\x1b[32m" : "\x1b[31m";
+          const statusText = exitCode === 0 ? "PASSED" : "FAILED";
+          livePanelSinkWrap({
+            type: "raw_log",
+            text: `\r\n${statusColor}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\x1b[0m\r\n${statusColor}[Smart Behave] Run ${statusText} with exit code ${exitCode} in ${durationSec}s\x1b[0m\r\n`
+          });
+          livePanelSinkWrap({
+            type: "run_finished",
+            exitCode,
+            duration: Number(durationSec)
           });
         }
         resolvePromise();

@@ -7,6 +7,8 @@ import { behaveTestController } from "./testController";
 import { stepDefinitionIndex } from "./language/stepIndex";
 import { featureStepIndex } from "./language/featureStepIndex";
 import { BehaveCompletionItemProvider } from "./language/stepCompletionProvider";
+import { BehaveTagCompletionProvider } from "./language/tagCompletionProvider";
+import { BehaveCodeActionProvider } from "./language/stepCodeActionProvider";
 import { BehaveDefinitionProvider } from "./language/stepDefinitionProvider";
 import { BehaveStepReferenceProvider } from "./language/stepReferenceProvider";
 import { BehaveStepUsageProvider } from "./language/stepUsageProvider";
@@ -86,6 +88,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         new BehaveCompletionItemProvider(),
         " "
       ),
+      // Tag autocomplete (@wip, @smoke, etc.)
+      vscode.languages.registerCompletionItemProvider(
+        featureSelector,
+        new BehaveTagCompletionProvider(),
+        "@"
+      ),
+      // Code actions (QuickFix to generate Python step definition)
+      vscode.languages.registerCodeActionsProvider(
+        featureSelector,
+        new BehaveCodeActionProvider(),
+        {
+          providedCodeActionKinds: BehaveCodeActionProvider.providedCodeActionKinds
+        }
+      ),
       // Go to Definition (.feature -> Python step function)
       vscode.languages.registerDefinitionProvider(
         featureSelector,
@@ -109,6 +125,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.languages.registerDocumentRangeFormattingEditProvider(
         featureSelector,
         new BehaveFormattingProvider()
+      ),
+      // On-Type Formatting for Gherkin Tables (|)
+      vscode.languages.registerOnTypeFormattingEditProvider(
+        featureSelector,
+        new BehaveFormattingProvider(),
+        "|"
       ),
       // Semantic Tokens (Syntax coloring for tags, steps, placeholders, tables, docstrings)
       vscode.languages.registerDocumentSemanticTokensProvider(

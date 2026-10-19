@@ -22,6 +22,7 @@ import { behaveTestController } from "./testController";
 import { stepDefinitionIndex } from "./language/stepIndex";
 import { featureStepIndex } from "./language/featureStepIndex";
 import { revealLiveRunPanel } from "./ui/liveRunWebview";
+import { executeGenerateStepDefinition, GeneratedStepSnippet } from "./language/stepCodeActionProvider";
 
 type RunScenarioArgs = {
   filePath: string;
@@ -136,8 +137,19 @@ export function registerCommands(context: vscode.ExtensionContext): void {
       SmartBehaveConfigPanel.createOrShow(context.extensionUri);
     };
 
+    const generateStep = async (uri: vscode.Uri, snippet: GeneratedStepSnippet) => {
+      await executeGenerateStepDefinition(uri, snippet);
+    };
+
+    const copySnippet = async (code: string) => {
+      await vscode.env.clipboard.writeText(code);
+      vscode.window.showInformationMessage("Smart Behave: Step definition snippet copied to clipboard!");
+    };
+
     // Register commands under smartBehave, behave, and behaveRunner namespaces
     const commands = [
+      { name: "smartBehave.generateStepDefinition", fn: generateStep },
+      { name: "smartBehave.copyStepSnippet", fn: copySnippet },
       { name: "smartBehave.openConfiguration", fn: openConfiguration },
       { name: "smartBehave.openSettings", fn: openConfiguration },
       { name: "behave.openConfiguration", fn: openConfiguration },

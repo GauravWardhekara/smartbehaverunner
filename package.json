@@ -54,6 +54,16 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "snippets": [
+      {
+        "language": "behave",
+        "path": "./snippets/gherkin.json"
+      },
+      {
+        "language": "feature",
+        "path": "./snippets/gherkin.json"
+      }
+    ],
     "semanticTokenTypes": [
       {
         "id": "behaveComment",
@@ -182,6 +192,14 @@
       ]
     },
     "commands": [
+      {
+        "command": "smartBehave.generateStepDefinition",
+        "title": "Smart Behave: Generate Step Definition in Python"
+      },
+      {
+        "command": "smartBehave.copyStepSnippet",
+        "title": "Smart Behave: Copy Step Definition Snippet to Clipboard"
+      },
       {
         "command": "smartBehave.openConfiguration",
         "title": "Smart Behave: Open Configuration Screen",
@@ -483,7 +501,7 @@
     "esbuild": "node esbuild.js",
     "compile": "npm run check-ts && npm run esbuild",
     "check-ts": "tsc --noEmit",
-    "test": "node -e \"const esbuild = require('esbuild'); esbuild.buildSync({ entryPoints: ['test/verify.ts'], bundle: true, platform: 'node', outfile: 'test/verify.cjs' });\" && node test/verify.cjs && node -e \"require('fs').unlinkSync('test/verify.cjs')\"",
+    "test": "node -e \"const esbuild = require('esbuild'); esbuild.buildSync({ entryPoints: ['test/verify.ts'], bundle: true, platform: 'node', external: ['vscode'], outfile: 'test/verify.cjs' });\" && node test/verify.cjs && node -e \"require('fs').unlinkSync('test/verify.cjs')\"",
     "watch": "node esbuild.js --watch",
     "package": "npm run compile && vsce package"
   },
