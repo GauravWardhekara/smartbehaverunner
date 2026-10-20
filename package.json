@@ -1,6 +1,6 @@
 {
   "name": "smart-behave-runner",
-  "publisher": "gaurav-wardhekar",
+  "publisher": "GauravWardhekar",
   "description": "Comprehensive BDD support for Behave in Python: Test Explorer, Interactive Configuration Screen, In-editor CodeLens, Live Run panel, Go to Definition, Step Autocomplete, Formatting, and Diagnostics.",
   "displayName": "Smart Behave Runner",
   "version": "1.0.0",
