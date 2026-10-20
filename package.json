@@ -594,7 +594,10 @@
     "check-ts": "tsc --noEmit",
     "test": "node -e \"const esbuild = require('esbuild'); esbuild.buildSync({ entryPoints: ['test/verify.ts'], bundle: true, platform: 'node', external: ['vscode'], outfile: 'test/verify.cjs' });\" && node test/verify.cjs && node -e \"require('fs').unlinkSync('test/verify.cjs')\"",
     "watch": "node esbuild.js --watch",
-    "package": "npm run compile && vsce package"
+    "package": "node scripts/package-registry.js --all",
+    "package:vscode": "node scripts/package-registry.js --registry=vscode",
+    "package:openvsx": "node scripts/package-registry.js --registry=openvsx",
+    "package:all": "node scripts/package-registry.js --all"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
