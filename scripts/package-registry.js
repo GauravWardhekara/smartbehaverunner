@@ -47,8 +47,8 @@ if (targetArg === 'vscode' || targetArg === 'all') {
 }
 
 if (targetArg === 'openvsx' || targetArg === 'all') {
-  // Open VSX uses 'gaurav-wardhekar'
-  packageForPublisher('gaurav-wardhekar', `smart-behave-runner-openvsx-${version}.vsix`);
+  // Open VSX uses 'GauravWardhekara'
+  packageForPublisher('GauravWardhekara', `smart-behave-runner-openvsx-${version}.vsix`);
 }
 
 console.log('\nAll requested packages built successfully!\n');
