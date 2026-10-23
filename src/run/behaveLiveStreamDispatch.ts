@@ -1,5 +1,7 @@
+import * as path from "path";
 import * as vscode from "vscode";
 import { BG_PREFIX, type BehaveHierarchyNode } from "./behaveHierarchyModel";
+import { behaveResultsManager, type CompletedStepRecord } from "./behaveResultsManager";
 import {
   countScenariosWithStrippedOutlineName,
   findBgItem,
@@ -264,6 +266,9 @@ export function flushPendingHookStdout(
   });
 }
 
+let currentScenarioStartTime = Date.now();
+let currentScenarioSteps: CompletedStepRecord[] = [];
+
 export function dispatchLiveStreamEvent(
   event: LiveStreamEvent,
   ctx: {
@@ -288,11 +293,14 @@ export function dispatchLiveStreamEvent(
     }) => void;
     hookFlushState?: LiveRunHookFlushState;
     testRunReporter?: BehaveTestRunReporter;
+    capsFile?: string;
   }
 ): void {
   const uri = ctx.featureItem.uri;
 
   if (event.event === "scenario_started") {
+    currentScenarioStartTime = Date.now();
+    currentScenarioSteps = [];
     ctx.testRunReporter?.onScenarioStarted(
       ctx.fsPath,
       event.scenario,
@@ -368,6 +376,42 @@ export function dispatchLiveStreamEvent(
       key: binding.key,
       status: event.status
     });
+
+    try {
+      const durationMs = Math.max(0, Date.now() - currentScenarioStartTime);
+      const statusNormalized = (event.status || "unknown").toLowerCase();
+      const finalStatus =
+        statusNormalized === "passed"
+          ? "passed"
+          : statusNormalized === "failed"
+            ? "failed"
+            : statusNormalized === "skipped"
+              ? "skipped"
+              : "failed";
+      const firstError = currentScenarioSteps.find((s) => s.error)?.error;
+      const passedStepsCount = currentScenarioSteps.filter((s) => s.status === "passed").length;
+      const failedStepsCount = currentScenarioSteps.filter((s) => s.status === "failed").length;
+
+      behaveResultsManager.recordScenario({
+        featureName: ctx.featureItem.label,
+        featureFilePath: ctx.fsPath,
+        relativeFilePath: path.relative(ctx.workspaceRoot, ctx.fsPath).replace(/\\/g, "/"),
+        scenarioName: event.scenario || binding.scenarioItem?.label || "(scenario)",
+        scenarioLine: binding.scenarioItem?.range?.start.line ?? 0,
+        status: finalStatus as any,
+        durationMs,
+        timestamp: Date.now(),
+        capsFile: ctx.capsFile,
+        errorMessage: firstError,
+        errorStep: currentScenarioSteps.find((s) => s.error)?.text,
+        totalSteps: currentScenarioSteps.length,
+        passedSteps: passedStepsCount,
+        failedSteps: failedStepsCount,
+        steps: [...currentScenarioSteps]
+      });
+    } catch (recErr) {
+      // ignore recording errors
+    }
     return;
   }
 
@@ -421,6 +465,13 @@ export function dispatchLiveStreamEvent(
     statusForTree,
     err
   );
+
+  currentScenarioSteps.push({
+    keyword: b.kw,
+    text: b.stepText,
+    status: (statusForTree === "passed" ? "passed" : statusForTree === "failed" ? "failed" : "skipped") as any,
+    error: err || undefined
+  });
 
   const logHeadline = `${b.kw} ${b.stepText} ... ${statusForLog}\n`;
   const logHeadlineForPanel = stdoutPrefix + logHeadline;

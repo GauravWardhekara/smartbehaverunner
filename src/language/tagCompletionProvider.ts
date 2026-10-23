@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 
 const BUILT_IN_TAGS: { tag: string; doc: string }[] = [
-  { tag: "@wip", doc: "Work In Progress: Marks scenarios under active development. Often excluded in CI via `behave --tags=~@wip`." },
+  { tag: "@wip", doc: "Work In Progress: Marks scenarios under active development. Executed with `behave --wip`." },
   { tag: "@skip", doc: "Skip: Skips the scenario or feature during test execution." },
   { tag: "@smoke", doc: "Smoke: Fast critical-path test suite to verify essential build health." },
   { tag: "@regression", doc: "Regression: Comprehensive regression test suite." },
@@ -11,7 +11,9 @@ const BUILT_IN_TAGS: { tag: string; doc: string }[] = [
   { tag: "@integration", doc: "Integration: Tests multi-service or end-to-end integration flows." },
   { tag: "@unit", doc: "Unit: High-speed scenario verifying isolated BDD logic." },
   { tag: "@manual", doc: "Manual: Scenario intended for manual verification." },
-  { tag: "@fixture", doc: "Fixture: Behave fixture setup/cleanup hook (e.g. `@fixture.browser`)." },
+  { tag: "@fixture", doc: "Fixture: Behave fixture setup/cleanup hook (e.g. `@fixture.browser.firefox`)." },
+  { tag: "@xfail", doc: "Expected Failure: Marks a scenario that is currently expected to fail." },
+  { tag: "@not_implemented", doc: "Not Implemented: Marks a scenario whose step definitions are not yet implemented." },
 ];
 
 export class BehaveTagCompletionProvider implements vscode.CompletionItemProvider {
@@ -47,7 +49,7 @@ export class BehaveTagCompletionProvider implements vscode.CompletionItemProvide
     for (const doc of vscode.workspace.textDocuments) {
       if (doc.languageId === "feature" || doc.fileName.endsWith(".feature")) {
         const text = doc.getText();
-        const matches = text.match(/@\w+/g);
+        const matches = text.match(/@[\w.-]+/g);
         if (matches) {
           for (const m of matches) {
             discoveredTags.add(m);
@@ -63,7 +65,7 @@ export class BehaveTagCompletionProvider implements vscode.CompletionItemProvide
         for (const file of files) {
           const content = await vscode.workspace.fs.readFile(file);
           const str = Buffer.from(content).toString("utf-8");
-          const matches = str.match(/@\w+/g);
+          const matches = str.match(/@[\w.-]+/g);
           if (matches) {
             for (const m of matches) {
               discoveredTags.add(m);

@@ -1,5 +1,33 @@
 import * as vscode from "vscode";
-import { computeFeatureFormatLineEdits } from "../core/featureFormat";
+import { computeFeatureFormatLineEdits, FeatureFormatOptions } from "../core/featureFormat";
+import { settings } from "../settings";
+
+function getFormatOptions(
+  document: vscode.TextDocument,
+  options: vscode.FormattingOptions
+): FeatureFormatOptions {
+  const uri = document.uri;
+  return {
+    insertSpaces: options.insertSpaces,
+    tabSize: options.tabSize,
+    customIndent: {
+      enabled: settings.formatting.customIndentEnabled(uri),
+      indentCharacter: settings.formatting.indentCharacter(uri) as any,
+      feature: settings.formatting.indentFeature(uri),
+      scenario: settings.formatting.indentScenario(uri),
+      background: settings.formatting.indentBackground(uri),
+      rule: settings.formatting.indentRule(uri),
+      examples: settings.formatting.indentExamples(uri),
+      given: settings.formatting.indentGiven(uri),
+      when: settings.formatting.indentWhen(uri),
+      then: settings.formatting.indentThen(uri),
+      and: settings.formatting.indentAnd(uri),
+      but: settings.formatting.indentBut(uri),
+      star: settings.formatting.indentStar(uri),
+      relativeAnd: settings.formatting.relativeAnd(uri),
+    },
+  };
+}
 
 export class BehaveFormattingProvider
   implements
@@ -38,10 +66,8 @@ export class BehaveFormattingProvider
     }
 
     const lines = document.getText().split(/\r?\n/);
-    const edits = computeFeatureFormatLineEdits(lines, startLine, endLine, {
-      insertSpaces: options.insertSpaces,
-      tabSize: options.tabSize,
-    });
+    const formatOpts = getFormatOptions(document, options);
+    const edits = computeFeatureFormatLineEdits(lines, startLine, endLine, formatOpts);
 
     return edits.map((e) => {
       const len = lines[e.line]?.length ?? 0;
@@ -51,6 +77,7 @@ export class BehaveFormattingProvider
       );
     });
   }
+
   provideDocumentFormattingEdits(
     document: vscode.TextDocument,
     options: vscode.FormattingOptions,
@@ -61,10 +88,8 @@ export class BehaveFormattingProvider
       return [];
     }
 
-    const edits = computeFeatureFormatLineEdits(lines, 0, lines.length - 1, {
-      insertSpaces: options.insertSpaces,
-      tabSize: options.tabSize,
-    });
+    const formatOpts = getFormatOptions(document, options);
+    const edits = computeFeatureFormatLineEdits(lines, 0, lines.length - 1, formatOpts);
 
     return edits.map((e) => {
       const len = lines[e.line]?.length ?? 0;
@@ -85,10 +110,8 @@ export class BehaveFormattingProvider
     const start = range.start.line;
     const end = range.end.line;
 
-    const edits = computeFeatureFormatLineEdits(lines, start, end, {
-      insertSpaces: options.insertSpaces,
-      tabSize: options.tabSize,
-    });
+    const formatOpts = getFormatOptions(document, options);
+    const edits = computeFeatureFormatLineEdits(lines, start, end, formatOpts);
 
     return edits.map((e) => {
       const len = lines[e.line]?.length ?? 0;

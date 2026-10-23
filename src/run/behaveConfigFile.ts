@@ -41,7 +41,7 @@ function scanDirectoryForConfigFiles(
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.name.startsWith(".")) {
+      if (entry.name.startsWith(".") && entry.name !== ".behaverc") {
         continue;
       }
       const fullPath = path.join(dirPath, entry.name);
@@ -63,7 +63,7 @@ function scanDirectoryForConfigFiles(
         );
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
-        if (CONFIG_FILE_EXTENSIONS.has(ext)) {
+        if (entry.name === ".behaverc" || CONFIG_FILE_EXTENSIONS.has(ext)) {
           const rel = normalizePathSlashes(path.relative(baseDir, fullPath));
           results.push(rel);
         }
@@ -107,28 +107,54 @@ export function detectConfigFiles(
     }
   }
 
-  // 2. If no files detected yet, check common directory names
-  if (detected.size === 0) {
-    const candidateDirs = ["configs", "config", "caps", "capabilities"];
-    for (const candidate of candidateDirs) {
-      const candPath = path.resolve(workspaceRoot, candidate);
-      if (fs.existsSync(candPath)) {
-        const files = scanDirectoryForConfigFiles(candPath, workspaceRoot);
-        for (const f of files) {
-          detected.add(f);
-        }
+  // 2. Also check common directory names (configs, config, caps, capabilities)
+  const candidateDirs = ["configs", "config", "caps", "capabilities"];
+  for (const candidate of candidateDirs) {
+    const candPath = path.resolve(workspaceRoot, candidate);
+    if (fs.existsSync(candPath)) {
+      const files = scanDirectoryForConfigFiles(candPath, workspaceRoot);
+      for (const f of files) {
+        detected.add(f);
       }
     }
   }
 
-  // 3. Also check workspace root for caps/config files
-  if (detected.size === 0) {
-    const rootFiles = scanDirectoryForConfigFiles(workspaceRoot, workspaceRoot, 0, 0);
-    for (const f of rootFiles) {
-      const lower = f.toLowerCase();
-      if (lower.includes("caps") || lower.includes("config") || lower.includes("endpoint")) {
-        detected.add(f);
+  // 3. Scan one level deep for common project subfolders (e.g. example/configs, test/config, tests/configs)
+  try {
+    const rootEntries = fs.readdirSync(workspaceRoot, { withFileTypes: true });
+    for (const ent of rootEntries) {
+      if (ent.isDirectory() && !ent.name.startsWith(".") && ent.name !== "node_modules" && ent.name !== "out" && ent.name !== "dist") {
+        for (const candidate of candidateDirs) {
+          const subCandPath = path.join(workspaceRoot, ent.name, candidate);
+          if (fs.existsSync(subCandPath)) {
+            const files = scanDirectoryForConfigFiles(subCandPath, workspaceRoot);
+            for (const f of files) {
+              detected.add(f);
+            }
+          }
+        }
       }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 4. Also check workspace root for caps/config files
+  const rootFiles = scanDirectoryForConfigFiles(workspaceRoot, workspaceRoot, 0, 0);
+  for (const f of rootFiles) {
+    const lower = f.toLowerCase();
+    if (lower.includes("caps") || lower.includes("config") || lower.includes("endpoint")) {
+      if (
+        lower === "package.json" ||
+        lower === "package-lock.json" ||
+        lower === "tsconfig.json" ||
+        lower === "language-configuration.json" ||
+        lower === "dprint.json" ||
+        lower === "eslint.config.mjs"
+      ) {
+        continue;
+      }
+      detected.add(f);
     }
   }
 
@@ -243,4 +269,149 @@ export async function promptOrResolveCapsFile(
   }
 
   return normalizePathSlashes(chosen.relativePath);
+}
+
+export interface BehaveParsedConfig {
+  defaultTags?: string;
+  tags?: string;
+  dryRun?: boolean;
+  wip?: boolean;
+  stop?: boolean;
+  showSkipped?: boolean;
+  showTimings?: boolean;
+  format?: string;
+  outfiles?: string;
+  junit?: boolean;
+  junitDirectory?: string;
+  loggingLevel?: string;
+  stdoutCapture?: boolean;
+  stderrCapture?: boolean;
+  userdata: Record<string, string>;
+}
+
+/**
+ * Parses INI-style Behave configuration files (`behave.ini`, `.behaverc`, `setup.cfg`, `tox.ini`).
+ * Extracts `[behave]` and `[behave.userdata]` settings as documented in official Behave documentation.
+ */
+export function parseBehaveConfigFile(filePath: string): BehaveParsedConfig | null {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    const lines = content.split(/\r?\n/);
+    let currentSection = "";
+    const config: BehaveParsedConfig = {
+      userdata: {},
+    };
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#") || line.startsWith(";")) {
+        continue;
+      }
+      const sectionMatch = line.match(/^\[([^\]]+)\]$/);
+      if (sectionMatch) {
+        currentSection = sectionMatch[1].trim().toLowerCase();
+        continue;
+      }
+
+      const eqIdx = line.indexOf("=");
+      const colIdx = line.indexOf(":");
+      let delimiterIdx = -1;
+      if (eqIdx !== -1 && colIdx !== -1) {
+        delimiterIdx = Math.min(eqIdx, colIdx);
+      } else if (eqIdx !== -1) {
+        delimiterIdx = eqIdx;
+      } else {
+        delimiterIdx = colIdx;
+      }
+
+      if (delimiterIdx === -1) {
+        continue;
+      }
+
+      const key = line.slice(0, delimiterIdx).trim().toLowerCase();
+      const val = line.slice(delimiterIdx + 1).trim();
+
+      const parseBool = (v: string): boolean => {
+        const l = v.toLowerCase();
+        return l === "true" || l === "yes" || l === "1" || l === "on";
+      };
+
+      if (currentSection === "behave") {
+        switch (key) {
+          case "default_tags":
+            config.defaultTags = val;
+            break;
+          case "tags":
+            config.tags = val;
+            break;
+          case "dry_run":
+            config.dryRun = parseBool(val);
+            break;
+          case "wip":
+            config.wip = parseBool(val);
+            break;
+          case "stop":
+            config.stop = parseBool(val);
+            break;
+          case "show_skipped":
+            config.showSkipped = parseBool(val);
+            break;
+          case "show_timings":
+            config.showTimings = parseBool(val);
+            break;
+          case "format":
+            config.format = val;
+            break;
+          case "outfiles":
+            config.outfiles = val;
+            break;
+          case "junit":
+            config.junit = parseBool(val);
+            break;
+          case "junit_directory":
+            config.junitDirectory = val;
+            break;
+          case "logging_level":
+            config.loggingLevel = val.toUpperCase();
+            break;
+          case "stdout_capture":
+            config.stdoutCapture = parseBool(val);
+            break;
+          case "stderr_capture":
+            config.stderrCapture = parseBool(val);
+            break;
+        }
+      } else if (currentSection === "behave.userdata") {
+        config.userdata[key] = val;
+      }
+    }
+
+    return config;
+  } catch (err) {
+    LOG.warn(`Failed to parse Behave config file ${filePath}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Automatically locates the active Behave configuration file in the workspace root.
+ * Follows Behave's lookup precedence: `behave.ini`, `.behaverc`, `setup.cfg`, `tox.ini`.
+ */
+export function detectBehaveProjectConfig(
+  workspaceRoot: string
+): { filePath: string; config: BehaveParsedConfig } | null {
+  const candidateNames = ["behave.ini", ".behaverc", "setup.cfg", "tox.ini"];
+  for (const name of candidateNames) {
+    const full = path.resolve(workspaceRoot, name);
+    if (fs.existsSync(full)) {
+      const cfg = parseBehaveConfigFile(full);
+      if (cfg) {
+        return { filePath: full, config: cfg };
+      }
+    }
+  }
+  return null;
 }

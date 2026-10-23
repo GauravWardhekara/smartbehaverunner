@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { escapeBehaveNameSelect } from "../core";
 import type { BehaveJob } from "./behaveJobTypes";
 import { getLaunchJsonSmartBehaveArgs } from "./behaveLaunchConfig";
-import { applyCapsFileArg } from "./behaveConfigFile";
+import { applyCapsFileArg, detectBehaveProjectConfig } from "./behaveConfigFile";
 
 export function getJustMyCodeForResource(resourcePath: string): boolean {
   const resourceUri = vscode.Uri.file(resourcePath);
@@ -25,6 +25,9 @@ export function getBehaveExtraArgsForResource(
   const resourceUri = vscode.Uri.file(resourcePath);
   const cfg = vscode.workspace.getConfiguration("behave", resourceUri);
   let args = cfg.get<string[]>("extraArgs");
+  const folder = vscode.workspace.getWorkspaceFolder(resourceUri);
+  const root = folder ? folder.uri.fsPath : path.dirname(resourcePath);
+
   if (!Array.isArray(args) || args.length === 0) {
     const raw = vscode.workspace
       .getConfiguration("behaveRunner", resourceUri)
@@ -32,10 +35,27 @@ export function getBehaveExtraArgsForResource(
     if (Array.isArray(raw) && raw.length > 0) {
       args = raw.filter((item): item is string => typeof item === "string");
     } else {
-      const folder = vscode.workspace.getWorkspaceFolder(resourceUri);
-      const root = folder ? folder.uri.fsPath : path.dirname(resourcePath);
       args = getLaunchJsonSmartBehaveArgs(root);
     }
+  }
+
+  // Incorporate settings from project behave.ini / .behaverc if present
+  const projectCfg = detectBehaveProjectConfig(root);
+  if (projectCfg) {
+    const enriched = [...args];
+    if (
+      projectCfg.config.defaultTags &&
+      !enriched.includes("--tags") &&
+      !enriched.includes("-t")
+    ) {
+      enriched.push("--tags", projectCfg.config.defaultTags);
+    }
+    for (const [k, v] of Object.entries(projectCfg.config.userdata)) {
+      if (!enriched.some((a) => a.includes(`-D${k}=`) || a.includes(`${k}=`))) {
+        enriched.push("-D", `${k}=${v}`);
+      }
+    }
+    args = enriched;
   }
 
   if (capsFile) {

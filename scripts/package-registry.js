@@ -36,19 +36,20 @@ function packageForPublisher(publisher, outName) {
 console.log('Compiling TypeScript and production bundle...');
 run('npm run check-ts');
 run('node esbuild.js --production');
+run('node scripts/copy-wasms.js');
 
 const pkg = JSON.parse(pkgJsonOriginal);
 const version = pkg.version || '1.0.0';
 
 if (targetArg === 'vscode' || targetArg === 'all') {
   // VS Code Marketplace uses 'GauravWardhekar'
-  packageForPublisher('GauravWardhekar', `smart-behave-runner-vscode-${version}.vsix`);
-  packageForPublisher('GauravWardhekar', `smart-behave-runner-${version}.vsix`);
+  packageForPublisher('GauravWardhekar', `smart-cucumber-behave-vscode-${version}.vsix`);
+  packageForPublisher('GauravWardhekar', `smart-cucumber-behave-${version}.vsix`);
 }
 
 if (targetArg === 'openvsx' || targetArg === 'all') {
   // Open VSX uses 'GauravWardhekara'
-  packageForPublisher('GauravWardhekara', `smart-behave-runner-openvsx-${version}.vsix`);
+  packageForPublisher('GauravWardhekara', `smart-cucumber-behave-openvsx-${version}.vsix`);
 }
 
 console.log('\nAll requested packages built successfully!\n');

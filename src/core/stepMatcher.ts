@@ -71,7 +71,7 @@ export function getStepTextInvariants(pattern: string): string[] {
   }
 
   // Handle slash alternatives like red/blue/green
-  const slashMatch = pattern.match(/\b([a-zA-Z]+)(?:\/([a-zA-Z]+))+\b/);
+  const slashMatch = pattern.match(/\b([a-zA-Z0-9_]+)(?:\/([a-zA-Z0-9_]+))+\b/);
   if (slashMatch) {
     const fullSlash = slashMatch[0];
     const options = fullSlash.split("/");
@@ -90,10 +90,14 @@ function buildBehavePatternRegexBody(
   pattern: string,
   capturePlaceholders: boolean
 ): string {
-  // 1. Pre-process word alternatives like red/blue -> (?:red|blue)
+  // 1. Pre-process word alternatives like red/blue -> (?:red/blue|red|blue)
+  // Preserves literal slash phrases like date/time while also supporting individual alternatives
   let processed = pattern.replace(
-    /\b([a-zA-Z]+)(?:\/([a-zA-Z]+))+\b/g,
-    (match) => `(?:${match.replace(/\//g, "|")})`
+    /\b([a-zA-Z0-9_]+)(?:\/([a-zA-Z0-9_]+))+\b/g,
+    (match) => {
+      const parts = match.split("/");
+      return `(?:${match}|${parts.join("|")})`;
+    }
   );
 
   // 2. Pre-process optional text like apple(s) or (a ) -> (?:s)? or (?:a )?
@@ -103,11 +107,22 @@ function buildBehavePatternRegexBody(
   );
 
   // 3. Tokenize regex groups and placeholders
-  const tokens: string[] = [];
-  const tokenized = processed.replace(
+  const tokens: { raw: string; isQuoted?: boolean }[] = [];
+
+  // Match quoted placeholders: '{name}', "{name}", \'{name}\', \"{name}\"
+  let tokenized = processed.replace(
+    /(?:\\?(['"]))\{([^{}:]*)(?::([^{}]+))?\}\1/g,
+    (m) => {
+      tokens.push({ raw: m, isQuoted: true });
+      return `__TOKEN_${tokens.length - 1}__`;
+    }
+  );
+
+  // Match unquoted placeholders or (?:...) groups
+  tokenized = tokenized.replace(
     /(?:\(\?:[^\)]+\)\??|\{[^{}]*\})/g,
     (m) => {
-      tokens.push(m);
+      tokens.push({ raw: m, isQuoted: false });
       return `__TOKEN_${tokens.length - 1}__`;
     }
   );
@@ -115,37 +130,66 @@ function buildBehavePatternRegexBody(
   let regexStr = tokenized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   let captureIndex = 0;
-  regexStr = regexStr.replace(/__TOKEN_(\d+)__/g, (_, idxStr) => {
+  regexStr = regexStr.replace(/([ \t]*)__TOKEN_(\d+)__/g, (_, ws, idxStr) => {
     const token = tokens[Number(idxStr)];
-    if (token.startsWith("(?:")) {
-      return token; // Preserved alternative/optional regex group
+    if (token.raw.startsWith("(?:")) {
+      return (ws || "") + token.raw; // Preserved alternative/optional regex group
     }
 
-    const m = token.match(/^\{([^{}:]*)(?::([^{}]+))?\}$/);
+    const m = token.raw.match(/\{([^{}:]*)(?::([^{}]+))?\}/);
     if (!m) {
-      return "\\{\\}";
+      return (ws || "") + "\\{\\}";
     }
     const namePart = (m[1] ?? "").trim();
-    const typePart = (m[2] ?? "").trim();
+    let typePart = (m[2] ?? "").trim();
+    let cardinality = "";
+    if (typePart && /[?*+]$/.test(typePart)) {
+      cardinality = typePart.slice(-1);
+      typePart = typePart.slice(0, -1);
+    }
 
-    let resolvedType: string | undefined;
+    let resolvedBase: string | undefined;
     if (typePart && BEHAVE_TYPE_PATTERNS[typePart]) {
-      resolvedType = BEHAVE_TYPE_PATTERNS[typePart];
+      resolvedBase = BEHAVE_TYPE_PATTERNS[typePart];
     } else if (!typePart && namePart && BEHAVE_TYPE_PATTERNS[namePart]) {
       // Cucumber expression style: e.g. {int}, {float}, {string}, {word}
-      resolvedType = BEHAVE_TYPE_PATTERNS[namePart];
+      resolvedBase = BEHAVE_TYPE_PATTERNS[namePart];
     } else if (typePart) {
       // Unknown custom type e.g. {user:CustomType} -> match non-whitespace
-      resolvedType = "[^\\s]+";
+      resolvedBase = "[^\\s]+";
     }
 
-    const typePattern = resolvedType || DEFAULT_PLACEHOLDER_PATTERN;
-    const inner = `(?:${typePattern}|${OUTLINE_PLACEHOLDER_PATTERN})`;
+    const basePattern = resolvedBase || DEFAULT_PLACEHOLDER_PATTERN;
+    let inner: string;
+
+    const prefixWs = cardinality === "?" ? "" : (ws || "");
+
+    if (cardinality === "?") {
+      const optGroup = `(?:${basePattern}|${OUTLINE_PLACEHOLDER_PATTERN})`;
+      inner = ws ? `(?:${ws}${optGroup})?` : `(?:${optGroup})?`;
+    } else if (cardinality === "*") {
+      const repGroup = `(?:${basePattern}|${OUTLINE_PLACEHOLDER_PATTERN})`;
+      inner = `(?:${repGroup}(?:\\s*,?\\s*${repGroup})*)?`;
+    } else if (cardinality === "+") {
+      const repGroup = `(?:${basePattern}|${OUTLINE_PLACEHOLDER_PATTERN})`;
+      inner = `(${repGroup}(?:\\s*,?\\s*${repGroup})*)`;
+    } else {
+      inner = `(?:${basePattern}|${OUTLINE_PLACEHOLDER_PATTERN})`;
+    }
+
+    if (token.isQuoted) {
+      if (capturePlaceholders) {
+        const g = `p${captureIndex++}`;
+        return prefixWs + `['"]?(?<${g}>${inner})['"]?`;
+      }
+      return prefixWs + `['"]?${inner}['"]?`;
+    }
+
     if (capturePlaceholders) {
       const g = `p${captureIndex++}`;
-      return `(?<${g}>${inner})`;
+      return prefixWs + `(?<${g}>${inner})`;
     }
-    return inner;
+    return prefixWs + inner;
   });
 
   return regexStr;

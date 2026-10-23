@@ -1,10 +1,10 @@
 /**
- * Messages from the extension host to the Live run webview.
+ * Messages from the extension host to the Cucumber-Behave webview.
  * Keep in sync with media/liveRunPanel script handlers.
  */
 
 /** Bump when adding/removing/changing host→webview message shapes. */
-export const LIVE_PANEL_PROTOCOL_VERSION = 1;
+export const LIVE_PANEL_PROTOCOL_VERSION = 2;
 
 export type LivePanelToWebviewMessage =
   | { type: "protocol"; version: number }
@@ -49,20 +49,51 @@ export type LivePanelToWebviewMessage =
   | { type: "runCancelled" }
   | { type: "raw_log"; text: string }
   | { type: "run_started"; label: string; command?: string }
-  | { type: "run_finished"; exitCode: number; duration?: number };
+  | { type: "run_finished"; exitCode: number; duration?: number }
+  | { type: "discoveryData"; payload: unknown }
+  | { type: "resultsData"; records: unknown[]; summary: unknown }
+  | { type: "switchToTab"; tab: "discovery" | "execution" | "results" }
+  | { type: "runStatus"; isRunning: boolean }
+  | {
+      type: "allureGenerated";
+      success: boolean;
+      message: string;
+      reportPath?: string;
+      usedCli: boolean;
+    };
 
-/** Messages from the Live run webview to the extension host. */
+/** Messages from the Cucumber-Behave webview to the extension host. */
 export type LivePanelFromWebviewMessage =
   | { type: "livePanelReady" }
   | { type: "stopRun" }
+  | { type: "stopTest" }
   | { type: "rerunLastRun" }
+  | { type: "getDiscoveryData" }
+  | {
+      type: "runTest";
+      filePath: string;
+      scenarioName?: string;
+      scenarioLine?: number;
+      capsFile?: string;
+    }
+  | {
+      type: "openFile";
+      filePath: string;
+      line?: number;
+    }
   | {
       type: "revealStep";
       path?: string;
       gotoPath?: string;
       line?: number | string;
       gotoLine?: number | string;
-    };
+    }
+  | { type: "getResultsData" }
+  | { type: "clearResults" }
+  | { type: "generateAllure" }
+  | { type: "viewAllure" }
+  | { type: "openMainScreen" }
+  | { type: "setDefaultCaps"; capsFile: string };
 
 export function isLivePanelFromWebviewMessage(
   msg: unknown
@@ -85,7 +116,12 @@ const HOST_TO_WEBVIEW_TYPES = new Set([
   "runCancelled",
   "raw_log",
   "run_started",
-  "run_finished"
+  "run_finished",
+  "discoveryData",
+  "resultsData",
+  "switchToTab",
+  "runStatus",
+  "allureGenerated"
 ]);
 
 /** Best-effort guard before posting to the webview (extension host side). */

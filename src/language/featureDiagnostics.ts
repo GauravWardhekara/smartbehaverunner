@@ -44,6 +44,14 @@ export class BehaveDiagnosticsManager {
   }
 
   updateDiagnostics(document: vscode.TextDocument): void {
+    const suppressDuplicates = vscode.workspace
+      .getConfiguration("smartBehave")
+      .get<boolean>("diagnostics.suppressDuplicateBehaveWarnings", true);
+    if (suppressDuplicates) {
+      this.diagnosticCollection.delete(document.uri);
+      return;
+    }
+
     const text = document.getText();
     const definitions = stepDefinitionIndex.getDefinitions();
     const analysis = analyzeFeatureDocument(text, definitions);

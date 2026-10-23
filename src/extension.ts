@@ -31,20 +31,28 @@ import {
 import { registerBehaveOutputChannel } from "./run/behaveRunOutput";
 import { registerBehaveRunWorkspacePersistence } from "./run/behaveRunLastRun";
 import { registerLiveRunWebview } from "./ui/liveRunWebview";
+import { behaveResultsManager } from "./run/behaveResultsManager";
 import { getExtension } from "./utils/python";
 import { ensureLaunchJsonWithSmartBehaveArgs } from "./run/behaveLaunchConfig";
+import {
+  activateCucumberLanguageServer,
+  deactivateCucumberLanguageServer,
+} from "./cucumberLanguageServer";
 
 let isActivated = false;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   if (isActivated) {
-    LOG.info("Smart Behave extension already activated; skipping duplicate activation.");
+    LOG.info("Smart Cucumber-Behave extension already activated; skipping duplicate activation.");
     return;
   }
   isActivated = true;
-  LOG.info("Smart Behave extension activating...");
+  LOG.info("Smart Cucumber-Behave extension activating...");
 
   try {
+    // 0. Start Official Cucumber Language Server
+    await activateCucumberLanguageServer(context);
+
     // 1. Register Execution Store & Sinks
     const store = registerBehaveHierarchyStore(context);
     const runSinks = createBehaveRunSinks();
@@ -60,6 +68,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     registerBehaveRunWorkspacePersistence(context);
     registerBehaveOutputChannel(context);
+    behaveResultsManager.initialize(context);
     registerLiveRunWebview(context);
 
     // 2. Register Test Controller
@@ -76,6 +85,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     featureStepIndex.registerWatcher(context);
 
     const featureSelector: vscode.DocumentSelector = [
+      { language: "cucumber", scheme: "file" },
       { language: "behave", scheme: "file" },
       { language: "feature", scheme: "file" },
       { language: "gherkin", scheme: "file" },
@@ -208,15 +218,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       })
     );
 
-    LOG.info("Behave extension successfully activated.");
+    LOG.info("Smart Cucumber-Behave extension successfully activated.");
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    LOG.error("Failed to activate Behave extension:", msg);
-    void vscode.window.showErrorMessage(`Behave extension failed to activate: ${msg}`);
+    LOG.error("Failed to activate Smart Cucumber-Behave extension:", msg);
+    void vscode.window.showErrorMessage(`Smart Cucumber-Behave extension failed to activate: ${msg}`);
   }
 }
 
-export function deactivate(): void {
+export async function deactivate(): Promise<void> {
   isActivated = false;
   setBehaveRunnerContext(undefined);
+  await deactivateCucumberLanguageServer();
 }

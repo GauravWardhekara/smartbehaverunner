@@ -1,9 +1,9 @@
 {
-  "name": "smart-behave-runner",
+  "name": "smart-cucumber-behave",
   "publisher": "GauravWardhekar",
-  "description": "Comprehensive BDD support for Behave in Python: Test Explorer, Interactive Configuration Screen, In-editor CodeLens, Live Run panel, Go to Definition, Step Autocomplete, Formatting, and Diagnostics.",
-  "displayName": "Smart Behave Runner",
-  "version": "1.0.1",
+  "description": "Comprehensive Cucumber & Behave support for VS Code: Official Cucumber Language Server (multilingual step definitions, autocomplete, diagnostics, formatting) + Smart Behave Runner (Test Explorer, Live Run panel, CodeLens, Interactive Configuration).",
+  "displayName": "Smart Cucumber-Behave",
+  "version": "1.1.0",
   "license": "MIT",
   "author": "Gaurav Wardhekar <gauravwardhekar@gmail.com>",
   "contributors": [
@@ -11,25 +11,31 @@
     "Remo Yukoff <remo.yukoff@gmail.com>"
   ],
   "repository": {
-    "url": "https://github.com/GauravWardhekara/smartbehaverunner.git",
+    "url": "https://github.com/GauravWardhekara/smart-cucumber-behave.git",
     "type": "git"
+  },
+  "bugs": {
+    "url": "https://github.com/GauravWardhekara/smart-cucumber-behave/issues"
   },
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Testing",
-    "Programming Languages"
+    "Programming Languages",
+    "Formatters",
+    "Linters"
   ],
   "keywords": [
+    "cucumber",
     "behave",
     "bdd",
     "gherkin",
-    "cucumber",
     "feature",
     "python",
     "test",
-    "testing"
+    "testing",
+    "runner"
   ],
   "icon": "./data/logo.png",
   "activationEvents": [
@@ -42,6 +48,26 @@
   "main": "./out/bundle.js",
   "contributes": {
     "languages": [
+      {
+        "id": "cucumber",
+        "aliases": [
+          "Cucumber",
+          "cucumber"
+        ],
+        "extensions": [
+          ".feature"
+        ],
+        "mimetypes": [
+          "text/x-gherkin",
+          "text/x-feature",
+          "text/x-cucumber"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./media/gherkin-light.svg",
+          "dark": "./media/gherkin-dark.svg"
+        }
+      },
       {
         "id": "behave",
         "aliases": [
@@ -119,6 +145,10 @@
     },
     "snippets": [
       {
+        "language": "cucumber",
+        "path": "./snippets/gherkin.json"
+      },
+      {
         "language": "behave",
         "path": "./snippets/gherkin.json"
       },
@@ -129,6 +159,10 @@
       {
         "language": "gherkin",
         "path": "./snippets/gherkin.json"
+      },
+      {
+        "language": "python",
+        "path": "./snippets/python.json"
       }
     ],
     "semanticTokenTypes": [
@@ -180,6 +214,47 @@
     ],
     "semanticTokenScopes": [
       {
+        "language": "cucumber",
+        "scopes": {
+          "behaveComment": [
+            "comment.line.number-sign",
+            "comment.line"
+          ],
+          "behaveStructuralKeyword": [
+            "keyword.control",
+            "keyword.other"
+          ],
+          "behaveStepKeyword": [
+            "entity.name.function",
+            "keyword.other"
+          ],
+          "behaveTitle": [
+            "entity.name.type.class",
+            "entity.name"
+          ],
+          "behaveStepText": [
+            "string.unquoted",
+            "markup.inserted"
+          ],
+          "behaveDocstring": [
+            "string.quoted.docstring",
+            "string.quoted"
+          ],
+          "behaveTable": [
+            "string.other",
+            "markup.inline.raw"
+          ],
+          "behavePlaceholder": [
+            "constant.character.format.placeholder",
+            "variable.other"
+          ],
+          "behaveTag": [
+            "entity.name.tag",
+            "support.variable.annotation"
+          ]
+        }
+      },
+      {
         "language": "behave",
         "scopes": {
           "behaveComment": [
@@ -223,40 +298,56 @@
     ],
     "configurationDefaults": {
       "files.associations": {
-        "*.feature": "behave"
+        "*.feature": "cucumber"
+      },
+      "[cucumber]": {
+        "editor.semanticHighlighting.enabled": true
+      },
+      "[behave]": {
+        "editor.semanticHighlighting.enabled": true
+      },
+      "[gherkin]": {
+        "editor.semanticHighlighting.enabled": true
+      },
+      "[feature]": {
+        "editor.semanticHighlighting.enabled": true
       },
       "editor.semanticTokenColorCustomizations": {
         "rules": {
+          "behaveTag:cucumber": "#FFA500",
+          "behavePlaceholder:cucumber": "#FF8DC7",
           "behaveTag:behave": "#FFA500",
           "behavePlaceholder:behave": "#FF8DC7"
         },
         "[*Dark*]": {
           "rules": {
+            "behaveStepText:cucumber": "#FFFFFF",
             "behaveStepText:behave": "#FFFFFF"
           }
         },
         "[*Light*]": {
           "rules": {
+            "behaveStepText:cucumber": "#1a1a1a",
             "behaveStepText:behave": "#1a1a1a"
           }
         }
       }
     },
     "viewsContainers": {
-      "panel": [
+      "activitybar": [
         {
-          "id": "smartBehaveExecutionPanel",
-          "title": "Smart Behave",
+          "id": "cucumberBehaveViewContainer",
+          "title": "Cucumber-Behave",
           "icon": "media/behave-activity.svg"
         }
       ]
     },
     "views": {
-      "smartBehaveExecutionPanel": [
+      "cucumberBehaveViewContainer": [
         {
           "type": "webview",
           "id": "smartBehave.liveRun",
-          "name": "Live Run",
+          "name": "Cucumber-Behave",
           "icon": "media/behave-activity.svg",
           "visibility": "visible"
         }
@@ -303,7 +394,32 @@
       },
       {
         "command": "smartBehave.showLiveRun",
-        "title": "Smart Behave: Show Live Run Panel"
+        "title": "Smart Behave: Show Cucumber-Behave Panel"
+      },
+      {
+        "command": "smartBehave.openMainScreen",
+        "title": "Cucumber-Behave: Open Execution & Results on Main Screen",
+        "icon": "$(screen-full)"
+      },
+      {
+        "command": "smartBehave.generateAllureReport",
+        "title": "Cucumber-Behave: Generate Allure Report",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "smartBehave.viewAllureReport",
+        "title": "Cucumber-Behave: View Allure Report",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "smartBehave.clearResults",
+        "title": "Cucumber-Behave: Clear Test Results History",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "smartBehave.refreshDiscovery",
+        "title": "Cucumber-Behave: Refresh Feature Discovery",
+        "icon": "$(refresh)"
       },
       {
         "command": "behave.run",
@@ -368,6 +484,31 @@
       {
         "command": "behaveRunner.debugScenario",
         "title": "Behave: Debug Scenario"
+      },
+      {
+        "command": "smartBehave.formatCustomGherkin",
+        "title": "Smart Cucumber-Behave: Format Feature with Custom Indentation",
+        "icon": "$(layout)"
+      },
+      {
+        "command": "smartBehave.runWithTags",
+        "title": "Smart Cucumber-Behave: Run with Tags (--tags)",
+        "icon": "$(tag)"
+      },
+      {
+        "command": "smartBehave.runDryRun",
+        "title": "Smart Cucumber-Behave: Dry Run (--dry-run)",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "smartBehave.runWip",
+        "title": "Smart Cucumber-Behave: Run Work-In-Progress (--wip)",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "smartBehave.openEnvironmentFile",
+        "title": "Smart Cucumber-Behave: Open/Create features/environment.py",
+        "icon": "$(file-code)"
       }
     ],
     "configuration": [
@@ -450,6 +591,11 @@
               "Expected: (?<expected>.*)[\\s\\S]*but: was (?<actual>.*)"
             ],
             "description": "Regular Expressions to match failed runs against. Should have two groups: expected and actual"
+          },
+          "smartBehave.diagnostics.suppressDuplicateBehaveWarnings": {
+            "type": "boolean",
+            "default": true,
+            "description": "Suppress redundant Behave undefined-step warnings when the Cucumber Language Server diagnostics are active to prevent duplicate warnings."
           },
           "behave.allowedFiles": {
             "type": "string",
@@ -585,19 +731,148 @@
             "description": "Alias for behave.defaultConfigFile"
           }
         }
+      },
+      {
+        "title": "Cucumber",
+        "properties": {
+          "cucumber.features": {
+            "markdownDescription": "The `cucumber.features` setting overrides where the extension\nshould look for `.feature` files.\n\nIf no feature files are found, [autocomplete](#autocomplete)\nwill not work.\n\nDefault value:\n\n```json\n{\n  \"cucumber.features\": [\n    \"src/test/**/*.feature\",\n    \"features/**/*.feature\",\n    \"tests/**/*.feature\",\n    \"*specs*/**/*.feature\"\n  ]\n}\n```",
+            "type": "array",
+            "required": false,
+            "default": [
+              "src/test/**/*.feature",
+              "features/**/*.feature",
+              "tests/**/*.feature",
+              "*specs*/**/*.feature"
+            ]
+          },
+          "cucumber.glue": {
+            "markdownDescription": "The `cucumber.glue` setting overrides where the extension\nshould look for source code where step definitions and\nparameter types are defined.\n\nIf no glue files are found, [autocomplete](#autocomplete)\nwill not work, and all Gherkin steps will be underlined as\nundefined. [Generate step definition](#generate-step-definition)\nwill not work either.\n\nDefault value:\n\n```json\n{\n  \"cucumber.glue\": [\n    \"*specs*/**/*.cs\",\n    \"features/**/*.js\",\n    \"features/**/*.jsx\",\n    \"features/**/*.php\",\n    \"features/**/*.py\",\n    \"features/**/*.rs\",\n    \"features/**/*.rb\",\n    \"features/**/*.ts\",\n    \"features/**/*.tsx\",\n    \"features/**/*_test.go\",\n    \"src/test/**/*.java\",\n    \"tests/**/*.py\",\n    \"tests/**/*.rs\",\n    \"**/steps/**/*.py\",\n    \"steps/**/*.py\",\n    \"**/*_steps.py\",\n    \"**/step_*.py\",\n    \"**/steps.py\"\n  ]\n}\n```",
+            "type": "array",
+            "required": false,
+            "default": [
+              "*specs*/**/*.cs",
+              "features/**/*.js",
+              "features/**/*.jsx",
+              "features/**/*.php",
+              "features/**/*.py",
+              "features/**/*.rs",
+              "features/**/*.rb",
+              "features/**/*.ts",
+              "features/**/*.tsx",
+              "features/**/*_test.go",
+              "src/test/**/*.java",
+              "tests/**/*.py",
+              "tests/**/*.rs",
+              "**/steps/**/*.py",
+              "steps/**/*.py",
+              "**/*_steps.py",
+              "**/step_*.py",
+              "**/steps.py"
+            ]
+          },
+          "cucumber.parameterTypes": {
+            "markdownDescription": "Override the `cucumber.parameterTypes` setting if your Cucumber Expressions\nare using [Custom Parameter Types](https://github.com/cucumber/cucumber-expressions#custom-parameter-types) that are defined outside your `cucumber.glue` setting.\n\nParameter Types in the `cucumber.glue` globs will be picked up automatically.\n\nDefault value:\n\n```json\n{\n  \"cucumber.parameterTypes\": []\n}\n```",
+            "type": "array",
+            "required": false,
+            "default": []
+          }
+        }
+      },
+      {
+        "title": "Smart Cucumber-Behave: Gherkin Formatter",
+        "properties": {
+          "smartBehave.formatting.customIndent.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable custom fine-grained Gherkin indentation per keyword (Feature, Scenario, Background, Given, When, Then, And, But)"
+          },
+          "smartBehave.formatting.indentCharacter": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "tab",
+              "spaces"
+            ],
+            "default": "auto",
+            "description": "Indentation character unit: 'tab' forces tabs ('\\t'), 'spaces' uses editor tabSize spaces, 'auto' respects VS Code editor settings"
+          },
+          "smartBehave.formatting.indent.feature": {
+            "type": "number",
+            "default": 0,
+            "description": "Indentation level (number of tabs/indents) for Feature: headers (e.g. 0 tabs = no tab)"
+          },
+          "smartBehave.formatting.indent.scenario": {
+            "type": "number",
+            "default": 1,
+            "description": "Indentation level for Scenario: and Scenario Outline: headers (e.g. 1 tab after Feature)"
+          },
+          "smartBehave.formatting.indent.background": {
+            "type": "number",
+            "default": 1,
+            "description": "Indentation level for Background: headers"
+          },
+          "smartBehave.formatting.indent.rule": {
+            "type": "number",
+            "default": 1,
+            "description": "Indentation level for Rule: headers"
+          },
+          "smartBehave.formatting.indent.examples": {
+            "type": "number",
+            "default": 2,
+            "description": "Indentation level for Examples: headers"
+          },
+          "smartBehave.formatting.indent.given": {
+            "type": "number",
+            "default": 2,
+            "description": "Indentation level for Given steps (e.g. 2 tabs = one more tab after Scenario)"
+          },
+          "smartBehave.formatting.indent.when": {
+            "type": "number",
+            "default": 2,
+            "description": "Indentation level for When steps"
+          },
+          "smartBehave.formatting.indent.then": {
+            "type": "number",
+            "default": 3,
+            "description": "Indentation level for Then steps (e.g. 3 tabs = one more tab after Given)"
+          },
+          "smartBehave.formatting.indent.and": {
+            "type": "number",
+            "default": 4,
+            "description": "Indentation level for And steps (e.g. 4 tabs = one more tab after Then)"
+          },
+          "smartBehave.formatting.indent.but": {
+            "type": "number",
+            "default": 4,
+            "description": "Indentation level for But steps"
+          },
+          "smartBehave.formatting.indent.star": {
+            "type": "number",
+            "default": 2,
+            "description": "Indentation level for * (wildcard) steps"
+          },
+          "smartBehave.formatting.relativeAnd": {
+            "type": "boolean",
+            "default": false,
+            "description": "If true, And/But steps are indented relative to the preceding step (+1 tab); if false, uses explicit and/but tab levels"
+          }
+        }
       }
     ]
   },
   "scripts": {
+    "copy-wasms": "node scripts/copy-wasms.js",
     "esbuild": "node esbuild.js",
-    "compile": "npm run check-ts && npm run esbuild",
+    "compile": "npm run check-ts && npm run esbuild && npm run copy-wasms",
     "check-ts": "tsc --noEmit",
-    "test": "node -e \"const esbuild = require('esbuild'); esbuild.buildSync({ entryPoints: ['test/verify.ts'], bundle: true, platform: 'node', external: ['vscode'], outfile: 'test/verify.cjs' });\" && node test/verify.cjs && node -e \"require('fs').unlinkSync('test/verify.cjs')\"",
+    "test": "node -e \"const esbuild = require('esbuild'); esbuild.buildSync({ entryPoints: ['test/verify.ts'], bundle: true, platform: 'node', external: ['vscode'], outfile: 'out/verify.cjs' });\" && node out/verify.cjs && node -e \"require('fs').unlinkSync('out/verify.cjs')\"",
     "watch": "node esbuild.js --watch",
     "package": "node scripts/package-registry.js --all",
     "package:vscode": "node scripts/package-registry.js --registry=vscode",
     "package:openvsx": "node scripts/package-registry.js --registry=openvsx",
-    "package:all": "node scripts/package-registry.js --all"
+    "package:all": "node scripts/package-registry.js --all",
+    "install:ide": "node scripts/install-ide.js"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
@@ -608,6 +883,8 @@
     "typescript": "^5.4.0"
   },
   "dependencies": {
-    "neverthrow": "^8.2.0"
+    "@cucumber/language-server": "^1.7.0",
+    "neverthrow": "^8.2.0",
+    "vscode-languageclient": "^9.0.1"
   }
 }

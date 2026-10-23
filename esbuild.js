@@ -1,4 +1,24 @@
 import { context } from "esbuild";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function copyWasms() {
+    const wasmSrcDir = path.resolve(__dirname, "node_modules/@cucumber/language-service/dist");
+    const wasmDstDir = path.resolve(__dirname, "out");
+    if (!fs.existsSync(wasmDstDir)) {
+        fs.mkdirSync(wasmDstDir, { recursive: true });
+    }
+    if (fs.existsSync(wasmSrcDir)) {
+        const files = fs.readdirSync(wasmSrcDir).filter((f) => f.endsWith(".wasm"));
+        for (const f of files) {
+            fs.copyFileSync(path.join(wasmSrcDir, f), path.join(wasmDstDir, f));
+        }
+    }
+}
 
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
@@ -9,26 +29,22 @@ const watch = process.argv.includes("--watch");
 const esbuildProblemMatcherPlugin = {
     name: "esbuild-problem-matcher",
 
-    setup(build)
-    {
-        build.onStart(() =>
-        {
+    setup(build) {
+        build.onStart(() => {
             console.log("[watch] build started");
         });
-        build.onEnd((result) =>
-        {
-            result.errors.forEach(({ text, location }) =>
-            {
+        build.onEnd((result) => {
+            result.errors.forEach(({ text, location }) => {
                 console.error(`✘ [ERROR] ${text}`);
                 console.error(`    ${location.file}:${location.line}:${location.column}:`);
             });
+            copyWasms();
             console.log("[watch] build finished");
         });
     },
 };
 
-async function main()
-{
+async function main() {
     const ctx = await context({
         entryPoints: [
             "src/extension.ts",
@@ -47,18 +63,16 @@ async function main()
             esbuildProblemMatcherPlugin,
         ],
     });
-    if (watch)
-    {
+    if (watch) {
         await ctx.watch();
-    } else
-    {
+    } else {
         await ctx.rebuild();
+        copyWasms();
         await ctx.dispose();
     }
 }
 
-main().catch(e =>
-{
+main().catch(e => {
     console.error(e);
     process.exit(1);
 });

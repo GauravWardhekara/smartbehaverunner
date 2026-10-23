@@ -1,17 +1,16 @@
 import { behavePatternToRegex } from "./stepMatcher";
 import type { StepDefinition, StepKeyword } from "./types";
 
-const DECORATOR_REGEX_DOUBLE =
-  /^(\s*)@(given|when|then|step)\s*\(\s*(?:u?r?)?"((?:[^"\\]|\\.)*)"\s*\)/gim;
-
-const DECORATOR_REGEX_SINGLE =
-  /^(\s*)@(given|when|then|step)\s*\(\s*(?:u?r?)?'((?:[^'\\]|\\.)*)'\s*\)/gim;
-
-const DECORATOR_REGEX_COMPILE_DOUBLE =
-  /^(\s*)@(given|when|then|step)\s*\(\s*re\.compile\s*\(\s*r?"((?:[^"\\]|\\.)*)"/gim;
-
-const DECORATOR_REGEX_COMPILE_SINGLE =
-  /^(\s*)@(given|when|then|step)\s*\(\s*re\.compile\s*\(\s*r?'((?:[^'\\]|\\.)*)'/gim;
+/**
+ * Universal decorator regex supporting:
+ * - Standard decorators: @given, @when, @then, @step
+ * - Behave prefixed decorators: @behave.given, @behave.when, @behave.then, @behave.step
+ * - re.compile: @given(re.compile(r"..."))
+ * - String prefixes: r"...", u"...", ur"...", ru"...", R"...", U"..."
+ * - Quotes: Single quotes, double quotes, and triple quotes (''' or """)
+ */
+export const DECORATOR_REGEX_UNIVERSAL =
+  /^(\s*)@(?:behave\.)?(given|when|then|step)\s*\(\s*(?:re\.compile\s*\(\s*)?[rRuU]{0,2}("""|'''|"|')((?:\\.|(?!\3)[\s\S])*?)\3/i;
 
 /** Defaults aligned with extension `package.json` contributes.configuration. */
 export const DEFAULT_STEP_DEFINITION_PATTERNS = [
@@ -24,16 +23,7 @@ export const DEFAULT_STEP_DEFINITION_PATTERNS = [
 export function tryParseBehaveStepDecoratorLine(
   line: string
 ): { keyword: string; pattern: string } | null {
-  let match = matchDecorator(line, DECORATOR_REGEX_DOUBLE);
-  if (!match) {
-    match = matchDecorator(line, DECORATOR_REGEX_SINGLE);
-  }
-  if (!match) {
-    match = matchDecorator(line, DECORATOR_REGEX_COMPILE_DOUBLE);
-  }
-  if (!match) {
-    match = matchDecorator(line, DECORATOR_REGEX_COMPILE_SINGLE);
-  }
+  const match = matchDecorator(line, DECORATOR_REGEX_UNIVERSAL);
   if (!match) {
     return null;
   }
@@ -54,7 +44,7 @@ function matchDecorator(
   }
   const indent = match[1];
   const keyword = match[2];
-  const pattern = match[3];
+  const pattern = match[4];
   return {
     keyword,
     pattern,
@@ -75,17 +65,7 @@ export function parseStepDefinitionsFromPython(
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const line = lines[lineIndex];
-
-    let match = matchDecorator(line, DECORATOR_REGEX_DOUBLE);
-    if (!match) {
-      match = matchDecorator(line, DECORATOR_REGEX_SINGLE);
-    }
-    if (!match) {
-      match = matchDecorator(line, DECORATOR_REGEX_COMPILE_DOUBLE);
-    }
-    if (!match) {
-      match = matchDecorator(line, DECORATOR_REGEX_COMPILE_SINGLE);
-    }
+    const match = matchDecorator(line, DECORATOR_REGEX_UNIVERSAL);
 
     if (match) {
       const { keyword, pattern, character } = match;

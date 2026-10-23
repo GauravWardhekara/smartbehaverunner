@@ -1,107 +1,98 @@
 /**
- * Gherkin / Behave .feature document formatting (indentation, tags, tables).
- * Used by the language server; no VS Code or LSP types here.
+ * Custom Gherkin / Behave .feature document formatting (indentation, tags, tables).
+ * Supports fine-grained custom indentation levels for Feature, Scenario, Background,
+ * Given, When, Then, And, But.
  */
 
-const FORMAT_FEATURE_REGEX = /^(\s*)Feature:/i;
-const FORMAT_RULE_REGEX = /^(\s*)Rule:/i;
-const FORMAT_BACKGROUND_REGEX = /^(\s*)Background:/i;
-const FORMAT_SCENARIO_REGEX = /^(\s*)Scenario(?: Outline)?:/i;
-const FORMAT_EXAMPLES_REGEX = /^(\s*)Examples:/i;
-const FORMAT_STEP_REGEX = /^(\s*)(Given|When|Then|And|But|\*)\s+/i;
-const FORMAT_TAG_REGEX = /^(\s*)@/;
-const FORMAT_TABLE_REGEX = /^(\s*)\|/;
-const FORMAT_DOC_STRING_REGEX = /^(\s*)(""")/;
-const FORMAT_COMMENT_REGEX = /^(\s*)#/;
-const FORMAT_EMPTY_REGEX = /^\s*$/;
+export const FORMAT_FEATURE_REGEX = /^(\s*)Feature:/i;
+export const FORMAT_RULE_REGEX = /^(\s*)Rule:/i;
+export const FORMAT_BACKGROUND_REGEX = /^(\s*)Background:/i;
+export const FORMAT_SCENARIO_REGEX = /^(\s*)Scenario(?: Outline)?:/i;
+export const FORMAT_EXAMPLES_REGEX = /^(\s*)Examples:/i;
+export const FORMAT_STEP_REGEX = /^(\s*)(Given|When|Then|And|But|\*)\s+/i;
+export const FORMAT_GIVEN_REGEX = /^(\s*)Given\s+/i;
+export const FORMAT_WHEN_REGEX = /^(\s*)When\s+/i;
+export const FORMAT_THEN_REGEX = /^(\s*)Then\s+/i;
+export const FORMAT_AND_REGEX = /^(\s*)And\s+/i;
+export const FORMAT_BUT_REGEX = /^(\s*)But\s+/i;
+export const FORMAT_STAR_REGEX = /^(\s*)\*\s+/;
+export const FORMAT_TAG_REGEX = /^(\s*)@/;
+export const FORMAT_TABLE_REGEX = /^(\s*)\|/;
+export const FORMAT_DOC_STRING_REGEX = /^(\s*)(""")/;
+export const FORMAT_COMMENT_REGEX = /^(\s*)#/;
+export const FORMAT_EMPTY_REGEX = /^\s*$/;
 
-const INDENT = {
-  FEATURE: 0,
-  RULE: 2,
-  SCENARIO: 2,
-  STEP: 4,
-  TABLE: 6,
-  EXAMPLES: 4,
-  EXAMPLES_TABLE: 6
-} as const;
+export interface CustomIndentationConfig {
+  enabled?: boolean;
+  indentCharacter?: "tab" | "spaces" | "auto";
+  feature?: number;
+  scenario?: number;
+  background?: number;
+  rule?: number;
+  scenarioOutline?: number;
+  examples?: number;
+  given?: number;
+  when?: number;
+  then?: number;
+  and?: number;
+  but?: number;
+  star?: number;
+  table?: number;
+  docstring?: number;
+  relativeAnd?: boolean;
+}
 
 export type FeatureFormatOptions = {
   insertSpaces: boolean;
   tabSize: number;
+  customIndent?: CustomIndentationConfig;
 };
 
 /** One line fully replaced (line index, new line text without newline). */
 export type FeatureLineEdit = { line: number; newText: string };
+
+export const DEFAULT_CUSTOM_INDENT: Required<
+  Omit<CustomIndentationConfig, "table" | "docstring" | "scenarioOutline">
+> = {
+  enabled: true,
+  indentCharacter: "auto",
+  feature: 0,
+  scenario: 1,
+  background: 1,
+  rule: 1,
+  examples: 2,
+  given: 2,
+  when: 2,
+  then: 3,
+  and: 4,
+  but: 4,
+  star: 2,
+  relativeAnd: false,
+};
 
 interface TableSection {
   startLine: number;
   endLine: number;
   columnWidths: number[];
   rows: string[][];
+  parentStepLevel?: number;
+  inExamples: boolean;
 }
 
-function getIndentString(
-  spaces: number,
-  baseIndent: number,
-  indentChar: string
-): string {
-  if (indentChar === "\t") {
-    return "\t".repeat(Math.floor(spaces / baseIndent));
+function getIndentUnit(options: FeatureFormatOptions): string {
+  const charChoice = options.customIndent?.indentCharacter ?? "auto";
+  if (charChoice === "tab") {
+    return "\t";
   }
-  return " ".repeat(spaces);
-}
-
-function formatKeywordLine(
-  text: string,
-  indentSpaces: number,
-  baseIndent: number,
-  indentChar: string
-): string {
-  const indent = getIndentString(indentSpaces, baseIndent, indentChar);
-  return indent + text.trim();
-}
-
-function formatStepLine(
-  text: string,
-  indentSpaces: number,
-  baseIndent: number,
-  indentChar: string
-): string {
-  const indent = getIndentString(indentSpaces, baseIndent, indentChar);
-  const trimmed = text.trim();
-  const normalized = trimmed.replace(
-    /^(Given|When|Then|And|But|\*)\s+/i,
-    "$1 "
-  );
-  return indent + normalized;
-}
-
-function formatTagLine(
-  text: string,
-  indentSpaces: number,
-  baseIndent: number,
-  indentChar: string
-): string {
-  const indent = getIndentString(indentSpaces, baseIndent, indentChar);
-  const trimmed = text.trim();
-  const normalized = trimmed.replace(/\s+@/g, " @");
-  return indent + normalized;
-}
-
-function findNextNonEmptyLine(
-  lines: readonly string[],
-  startLine: number,
-  endLine: number,
-  lineCount: number
-): string | null {
-  const max = Math.min(endLine, lineCount - 1);
-  for (let i = startLine; i <= max; i++) {
-    const text = lines[i] ?? "";
-    if (!FORMAT_EMPTY_REGEX.test(text)) {
-      return text;
-    }
+  if (charChoice === "spaces") {
+    return " ".repeat(Math.max(1, options.tabSize || 4));
   }
-  return null;
+  // "auto": respect VS Code editor options
+  return options.insertSpaces ? " ".repeat(Math.max(1, options.tabSize || 4)) : "\t";
+}
+
+function getIndentStringForLevel(level: number, unit: string): string {
+  return unit.repeat(Math.max(0, level));
 }
 
 function parseTableRow(text: string): string[] {
@@ -117,18 +108,45 @@ function collectTableSections(
 ): TableSection[] {
   const sections: TableSection[] = [];
   let currentSection: TableSection | null = null;
+  let inExamples = false;
+  let lastStepLevel = 2;
 
-  for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
+  for (let lineNum = 0; lineNum <= endLine; lineNum++) {
     const text = lines[lineNum] ?? "";
-    const isTableLine = FORMAT_TABLE_REGEX.test(text);
 
+    if (FORMAT_EXAMPLES_REGEX.test(text)) {
+      inExamples = true;
+    } else if (
+      FORMAT_FEATURE_REGEX.test(text) ||
+      FORMAT_SCENARIO_REGEX.test(text) ||
+      FORMAT_BACKGROUND_REGEX.test(text) ||
+      FORMAT_RULE_REGEX.test(text)
+    ) {
+      inExamples = false;
+      lastStepLevel = 2;
+    } else if (FORMAT_STEP_REGEX.test(text)) {
+      inExamples = false;
+      if (FORMAT_GIVEN_REGEX.test(text)) lastStepLevel = 2;
+      else if (FORMAT_WHEN_REGEX.test(text)) lastStepLevel = 2;
+      else if (FORMAT_THEN_REGEX.test(text)) lastStepLevel = 3;
+      else if (FORMAT_AND_REGEX.test(text)) lastStepLevel = 4;
+      else if (FORMAT_BUT_REGEX.test(text)) lastStepLevel = 4;
+    }
+
+    if (lineNum < startLine) {
+      continue;
+    }
+
+    const isTableLine = FORMAT_TABLE_REGEX.test(text);
     if (isTableLine) {
       if (!currentSection) {
         currentSection = {
           startLine: lineNum,
           endLine: lineNum,
           columnWidths: [],
-          rows: []
+          rows: [],
+          inExamples,
+          parentStepLevel: lastStepLevel,
         };
       }
       currentSection.endLine = lineNum;
@@ -156,35 +174,20 @@ function collectTableSections(
   return sections;
 }
 
-function formatTableLine(
-  _text: string,
-  section: TableSection,
-  lineNum: number,
-  inRule: boolean,
-  inExamples: boolean,
-  baseIndent: number,
-  indentChar: string
-): string {
-  const rowIndex = lineNum - section.startLine;
-  const cells = section.rows[rowIndex];
-
-  let tableIndent: number;
-  if (inExamples) {
-    tableIndent = inRule
-      ? INDENT.EXAMPLES_TABLE + 2
-      : INDENT.EXAMPLES_TABLE;
-  } else {
-    tableIndent = inRule ? INDENT.TABLE + 2 : INDENT.TABLE;
+function findNextNonEmptyLine(
+  lines: readonly string[],
+  startLine: number,
+  endLine: number,
+  lineCount: number
+): string | null {
+  const max = Math.min(endLine, lineCount - 1);
+  for (let i = startLine; i <= max; i++) {
+    const text = lines[i] ?? "";
+    if (!FORMAT_EMPTY_REGEX.test(text)) {
+      return text;
+    }
   }
-
-  const indent = getIndentString(tableIndent, baseIndent, indentChar);
-
-  const formattedCells = cells.map((cell, index) => {
-    const width = section.columnWidths[index];
-    return " " + cell.padEnd(width) + " ";
-  });
-
-  return indent + "|" + formattedCells.join("|") + "|";
+  return null;
 }
 
 /**
@@ -197,15 +200,12 @@ export function computeFeatureFormatLineEdits(
   options: FeatureFormatOptions
 ): FeatureLineEdit[] {
   const edits: FeatureLineEdit[] = [];
-  const indentChar = options.insertSpaces
-    ? " ".repeat(options.tabSize)
-    : "\t";
-  const baseIndent = options.insertSpaces ? options.tabSize : 1;
+  const unit = getIndentUnit(options);
 
-  let inDocString = false;
-  let inRule = false;
-  let inExamples = false;
-  let docStringLines: { line: number; text: string }[] = [];
+  const custom = {
+    ...DEFAULT_CUSTOM_INDENT,
+    ...(options.customIndent || {}),
+  };
 
   const lineCount = lines.length;
   const safeEnd = Math.min(endLine, Math.max(0, lineCount - 1));
@@ -213,12 +213,18 @@ export function computeFeatureFormatLineEdits(
 
   const tableSections = collectTableSections(lines, safeStart, safeEnd);
 
+  let inDocString = false;
+  let inExamples = false;
+  let lastStepLevel = custom.given;
+  let docStringLines: { line: number; text: string }[] = [];
+  let docStringLevel = custom.given + 1;
+
   for (let lineNum = safeStart; lineNum <= safeEnd; lineNum++) {
     const text = lines[lineNum] ?? "";
 
+    // 1. Docstrings
     if (FORMAT_DOC_STRING_REGEX.test(text)) {
-      const docIndent = inRule ? INDENT.STEP + 2 : INDENT.STEP;
-      const indent = getIndentString(docIndent, baseIndent, indentChar);
+      const indent = getIndentStringForLevel(docStringLevel, unit);
       const formatted = indent + text.trim();
       if (formatted !== text) {
         edits.push({ line: lineNum, newText: formatted });
@@ -236,7 +242,7 @@ export function computeFeatureFormatLineEdits(
               const parsed = JSON.parse(rawDoc);
               const formattedJson = JSON.stringify(parsed, null, 2);
               const jsonLines = formattedJson.split("\n");
-              const bodyIndent = getIndentString(docIndent + 2, baseIndent, indentChar);
+              const bodyIndent = getIndentStringForLevel(docStringLevel + 1, unit);
               if (jsonLines.length === docStringLines.length) {
                 for (let k = 0; k < jsonLines.length; k++) {
                   const newLine = bodyIndent + jsonLines[k];
@@ -246,7 +252,7 @@ export function computeFeatureFormatLineEdits(
                 }
               }
             } catch {
-              // Not valid JSON, leave as is
+              // Not JSON, leave as is
             }
           }
         }
@@ -264,6 +270,7 @@ export function computeFeatureFormatLineEdits(
       continue;
     }
 
+    // 2. Empty Lines
     if (FORMAT_EMPTY_REGEX.test(text)) {
       if (text !== "") {
         edits.push({ line: lineNum, newText: "" });
@@ -271,62 +278,88 @@ export function computeFeatureFormatLineEdits(
       continue;
     }
 
+    // 3. Tables
     const tableSection = tableSections.find(
       (s) => lineNum >= s.startLine && lineNum <= s.endLine
     );
-
     if (tableSection) {
-      const formattedTable = formatTableLine(
-        text,
-        tableSection,
-        lineNum,
-        inRule,
-        inExamples,
-        baseIndent,
-        indentChar
-      );
+      const rowIndex = lineNum - tableSection.startLine;
+      const cells = tableSection.rows[rowIndex];
+
+      let tableLevel: number;
+      if (options.customIndent?.table !== undefined) {
+        tableLevel = options.customIndent.table;
+      } else if (tableSection.inExamples) {
+        tableLevel = custom.examples + 1;
+      } else {
+        tableLevel = (tableSection.parentStepLevel ?? custom.given) + 1;
+      }
+
+      const indent = getIndentStringForLevel(tableLevel, unit);
+      const formattedCells = cells.map((cell, index) => {
+        const width = tableSection.columnWidths[index];
+        return " " + cell.padEnd(width) + " ";
+      });
+      const formattedTable = indent + "|" + formattedCells.join("|") + "|";
+
       if (formattedTable !== text) {
         edits.push({ line: lineNum, newText: formattedTable });
       }
       continue;
     }
 
+    // 4. Feature Keywords
     let formatted: string;
 
     if (FORMAT_FEATURE_REGEX.test(text)) {
-      formatted = formatKeywordLine(
-        text,
-        INDENT.FEATURE,
-        baseIndent,
-        indentChar
-      );
-      inRule = false;
+      formatted = getIndentStringForLevel(custom.feature, unit) + text.trim();
       inExamples = false;
+      lastStepLevel = custom.given;
     } else if (FORMAT_RULE_REGEX.test(text)) {
-      formatted = formatKeywordLine(
-        text,
-        INDENT.RULE,
-        baseIndent,
-        indentChar
-      );
-      inRule = true;
+      formatted = getIndentStringForLevel(custom.rule, unit) + text.trim();
       inExamples = false;
+      lastStepLevel = custom.given;
     } else if (FORMAT_BACKGROUND_REGEX.test(text)) {
-      const indent = inRule ? INDENT.SCENARIO + 2 : INDENT.SCENARIO;
-      formatted = formatKeywordLine(text, indent, baseIndent, indentChar);
+      formatted = getIndentStringForLevel(custom.background, unit) + text.trim();
       inExamples = false;
+      lastStepLevel = custom.given;
     } else if (FORMAT_SCENARIO_REGEX.test(text)) {
-      const indent = inRule ? INDENT.SCENARIO + 2 : INDENT.SCENARIO;
-      formatted = formatKeywordLine(text, indent, baseIndent, indentChar);
+      const scenarioLevel = text.trim().toLowerCase().startsWith("scenario outline")
+        ? (options.customIndent?.scenarioOutline ?? custom.scenario)
+        : custom.scenario;
+      formatted = getIndentStringForLevel(scenarioLevel, unit) + text.trim();
       inExamples = false;
+      lastStepLevel = custom.given;
     } else if (FORMAT_EXAMPLES_REGEX.test(text)) {
-      const indent = inRule ? INDENT.EXAMPLES + 2 : INDENT.EXAMPLES;
-      formatted = formatKeywordLine(text, indent, baseIndent, indentChar);
+      formatted = getIndentStringForLevel(custom.examples, unit) + text.trim();
       inExamples = true;
     } else if (FORMAT_STEP_REGEX.test(text)) {
-      const indent = inRule ? INDENT.STEP + 2 : INDENT.STEP;
-      formatted = formatStepLine(text, indent, baseIndent, indentChar);
       inExamples = false;
+      const trimmed = text.trim();
+      let stepLevel = custom.given;
+
+      if (FORMAT_GIVEN_REGEX.test(trimmed)) {
+        stepLevel = custom.given;
+      } else if (FORMAT_WHEN_REGEX.test(trimmed)) {
+        stepLevel = custom.when;
+      } else if (FORMAT_THEN_REGEX.test(trimmed)) {
+        stepLevel = custom.then;
+      } else if (FORMAT_AND_REGEX.test(trimmed)) {
+        stepLevel = custom.relativeAnd ? lastStepLevel + 1 : custom.and;
+      } else if (FORMAT_BUT_REGEX.test(trimmed)) {
+        stepLevel = custom.relativeAnd ? lastStepLevel + 1 : custom.but;
+      } else if (FORMAT_STAR_REGEX.test(trimmed)) {
+        stepLevel = custom.star;
+      }
+
+      lastStepLevel = stepLevel;
+      docStringLevel = stepLevel + 1;
+
+      const normalized = trimmed.replace(
+        /^(Given|When|Then|And|But|\*)\s+/i,
+        "$1 "
+      );
+      formatted = getIndentStringForLevel(stepLevel, unit) + normalized;
     } else if (FORMAT_TAG_REGEX.test(text)) {
       const nextNonEmpty = findNextNonEmptyLine(
         lines,
@@ -334,27 +367,30 @@ export function computeFeatureFormatLineEdits(
         safeEnd,
         lineCount
       );
-      let tagIndent: number = INDENT.FEATURE;
+      let tagLevel = custom.feature;
       if (nextNonEmpty) {
         if (FORMAT_FEATURE_REGEX.test(nextNonEmpty)) {
-          tagIndent = INDENT.FEATURE;
+          tagLevel = custom.feature;
         } else if (FORMAT_RULE_REGEX.test(nextNonEmpty)) {
-          tagIndent = INDENT.RULE;
-        } else if (
-          FORMAT_SCENARIO_REGEX.test(nextNonEmpty) ||
-          FORMAT_BACKGROUND_REGEX.test(nextNonEmpty)
-        ) {
-          tagIndent = inRule ? INDENT.SCENARIO + 2 : INDENT.SCENARIO;
+          tagLevel = custom.rule;
+        } else if (FORMAT_BACKGROUND_REGEX.test(nextNonEmpty)) {
+          tagLevel = custom.background;
+        } else if (FORMAT_SCENARIO_REGEX.test(nextNonEmpty)) {
+          tagLevel = custom.scenario;
         } else if (FORMAT_EXAMPLES_REGEX.test(nextNonEmpty)) {
-          tagIndent = inRule ? INDENT.EXAMPLES + 2 : INDENT.EXAMPLES;
+          tagLevel = custom.examples;
+        } else if (FORMAT_STEP_REGEX.test(nextNonEmpty)) {
+          tagLevel = custom.given;
         }
       }
-      formatted = formatTagLine(text, tagIndent, baseIndent, indentChar);
+      const normalizedTags = text.trim().replace(/\s+@/g, " @");
+      formatted = getIndentStringForLevel(tagLevel, unit) + normalizedTags;
     } else if (FORMAT_COMMENT_REGEX.test(text)) {
       formatted = text.trimEnd();
     } else {
-      const indent = inRule ? INDENT.SCENARIO : INDENT.RULE;
-      formatted = getIndentString(indent, baseIndent, indentChar) + text.trim();
+      // Freeform description text under Feature / Scenario
+      const descLevel = inExamples ? custom.examples : custom.scenario;
+      formatted = getIndentStringForLevel(descLevel, unit) + text.trim();
     }
 
     if (formatted !== text) {
@@ -363,4 +399,30 @@ export function computeFeatureFormatLineEdits(
   }
 
   return edits;
+}
+
+/**
+ * Format a full Gherkin feature text string and return the formatted string.
+ */
+export function formatGherkinDocument(
+  source: string,
+  options?: Partial<FeatureFormatOptions>
+): string {
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  const lines = source.split(/\r?\n/);
+  const opts: FeatureFormatOptions = {
+    insertSpaces: options?.insertSpaces ?? true,
+    tabSize: options?.tabSize ?? 4,
+    customIndent: {
+      ...DEFAULT_CUSTOM_INDENT,
+      ...(options?.customIndent || {}),
+    },
+  };
+
+  const edits = computeFeatureFormatLineEdits(lines, 0, lines.length - 1, opts);
+  const resultLines = [...lines];
+  for (const edit of edits) {
+    resultLines[edit.line] = edit.newText;
+  }
+  return resultLines.join(eol);
 }

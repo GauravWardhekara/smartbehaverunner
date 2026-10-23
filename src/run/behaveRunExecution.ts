@@ -54,7 +54,7 @@ async function runBehaveJob(
   sinks: BehaveRunSinks,
   extensionPath: string,
   liveSessionId: number,
-  liveOpts?: { skipLivePanelReset?: boolean; capsFile?: string }
+  liveOpts?: { skipLivePanelReset?: boolean; capsFile?: string; extraCliArgs?: string[] }
 ): Promise<void> {
   const featureItem = job.featureItem;
   const fsPath = job.fsPath;
@@ -220,12 +220,14 @@ async function runBehaveJob(
         plainBytesSentToPanelForStep = pendingPlainStdout.length;
       },
       hookFlushState,
-      testRunReporter: reporter
+      testRunReporter: reporter,
+      capsFile: liveOpts?.capsFile
     };
 
     const proc = spawnBehave(runJob, workspaceRoot, interpreter.path, {
       liveFormatterPythonRoot: liveFormatterRoot,
-      capsFile: liveOpts?.capsFile
+      capsFile: liveOpts?.capsFile,
+      extraCliArgs: liveOpts?.extraCliArgs
     });
     registerTrackedBehaveSpawn(proc);
     const untrackBehaveSpawn = (): void => {
@@ -367,7 +369,8 @@ async function runBehaveJob(
 export async function runBehaveJobs(
   jobs: BehaveJob[],
   token: vscode.CancellationToken,
-  capsFile?: string
+  capsFile?: string,
+  extraCliArgs?: string[]
 ): Promise<void> {
   if (jobs.length === 0) {
     return;
@@ -406,6 +409,14 @@ export async function runBehaveJobs(
     });
     sinks.output.append(`[Smart Behave] Configuration: -D caps_file=${actualCapsFile}\r\n`);
   }
+  if (extraCliArgs && extraCliArgs.length > 0) {
+    const extraStr = extraCliArgs.join(" ");
+    sinks.livePanel.post({
+      type: "raw_log",
+      text: `\x1b[36m[Smart Behave] Extra CLI Arguments: ${extraStr}\x1b[0m\r\n`
+    });
+    sinks.output.append(`[Smart Behave] Extra CLI Arguments: ${extraStr}\r\n`);
+  }
   try {
     const batchSameFeatureScenarios =
       jobs.length > 1 &&
@@ -424,7 +435,8 @@ export async function runBehaveJobs(
         liveSessionId,
         {
           skipLivePanelReset: batchSameFeatureScenarios && i > 0,
-          capsFile: actualCapsFile
+          capsFile: actualCapsFile,
+          extraCliArgs
         }
       );
     }
@@ -443,10 +455,11 @@ export async function runBehaveJobs(
 export async function runBehaveHierarchySelection(
   items: BehaveHierarchyNode[],
   token: vscode.CancellationToken,
-  capsFile?: string
+  capsFile?: string,
+  extraCliArgs?: string[]
 ): Promise<void> {
   await revealLiveRunPanel();
-  await runBehaveJobs(planJobs(items), token, capsFile);
+  await runBehaveJobs(planJobs(items), token, capsFile, extraCliArgs);
 }
 
 export async function runBehaveHierarchyDebugSelection(
